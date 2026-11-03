@@ -201,6 +201,12 @@
       <span class="suave">Efectivo $ en gaveta</span>
       <strong class="num">{formatearUsd(resumen.esperadoUsd)}</strong>
     </div>
+    {#if resumen.pagosProveedoresBs}
+      <div class="tarjeta dato">
+        <span class="suave">Pagos a proveedores</span>
+        <strong class="num">{formatearBs(resumen.pagosProveedoresBs)}</strong>
+      </div>
+    {/if}
     {#if resumen.gastosBs || resumen.retirosBs}
       <div class="tarjeta dato">
         <span class="suave">Gastos / retiros</span>

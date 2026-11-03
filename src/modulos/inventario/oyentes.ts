@@ -48,6 +48,20 @@ export function registrarOyentesInventario(): void {
     }
   });
 
+  // Compras: entra el stock y el costo promedio se recalcula con el costo de la factura (D7).
+  suscribir('compra.registrada', async ({ compra, items }) => {
+    for (const item of items) {
+      await aplicarMovimiento(await productoVigente(item.productoId), {
+        tipo: 'entrada_compra',
+        cantidad: item.cantidadBase,
+        costoUnitario: item.costoBaseUsd,
+        motivo: `Compra ${compra.numero}`,
+        documentoTipo: 'compra',
+        documentoId: compra.id,
+      });
+    }
+  });
+
   suscribir('devolucion.registrada', async ({ devolucion, items }) => {
     for (const item of items) {
       await aplicarMovimiento(await productoVigente(item.productoId), {

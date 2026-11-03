@@ -147,14 +147,17 @@
       right: 0;
       bottom: 0;
       flex-direction: row;
-      justify-content: space-around;
+      justify-content: flex-start;
+      /* Con muchos módulos el menú se desliza de lado en vez de apretarse. */
+      overflow-x: auto;
+      scrollbar-width: none;
       padding: 0.35rem 0.25rem calc(0.35rem + env(safe-area-inset-bottom));
       border-right: 0;
       border-top: 1px solid var(--borde);
     }
 
     .menu a {
-      flex: 1;
+      flex: 1 0 68px;
       flex-direction: column;
       gap: 0.15rem;
       min-height: 56px;

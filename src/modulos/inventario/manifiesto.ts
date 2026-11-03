@@ -38,6 +38,7 @@ export const manifiestoInventario: ManifiestoModulo = {
     registrarOyentesInventario();
     suscribir('inventario.cambiado', ({ productoIds }) => inventario.refrescarProductos(productoIds));
     suscribir('ventas.cambiadas', ({ productoIds }) => inventario.refrescarProductos(productoIds));
+    suscribir('compras.cambiadas', ({ productoIds }) => inventario.refrescarProductos(productoIds));
     suscribir('categorias.cambiadas', () => inventario.refrescarCategorias());
     await inventario.cargar();
   },

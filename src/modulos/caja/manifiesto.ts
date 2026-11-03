@@ -12,6 +12,8 @@ export const manifiestoCaja: ManifiestoModulo = {
     registrarOyentesCaja();
     suscribir('caja.cambiada', () => caja.refrescar());
     suscribir('ventas.cambiadas', () => caja.refrescar());
+    suscribir('compras.cambiadas', () => caja.refrescar());
+    suscribir('clientes.cambiados', () => caja.refrescar());
     await caja.refrescar();
   },
 };

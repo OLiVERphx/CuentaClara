@@ -364,6 +364,21 @@ Se calcula por método y por moneda. El usuario cuenta el efectivo, el sistema m
 - **El recordatorio por WhatsApp** sigue pospuesto, como se acordó.
 - **Base de datos v3:** se agregaron clientes y movimientos de cuenta.
 
+### Fase 4 — terminada (2026-11-02)
+- [x] Proveedores (nombre, RIF, teléfono, contacto) con lo que se les debe.
+- [x] Compras por unidad, kilo o presentación (bulto x20…), en USD o en Bs fijo (D12).
+- [x] Al registrar: el stock sube y el costo promedio se recalcula con el costo de la factura (D7); queda en el kardex.
+- [x] Condición de pago: a crédito con fecha límite, pago parcial o total; desde la gaveta o desde otra cuenta.
+- [x] Cuentas por pagar: deuda total en $ y en Bs fijo, facturas vencidas y por vencer.
+- [x] Pagos posteriores en cualquier moneda, convertidos con la tasa del día.
+
+**Decisiones tomadas al implementarla:**
+- **Residuo de conversión:** si al pagar en otra moneda queda menos que la unidad mínima de esa moneda (por ejemplo, Bs 1,76 cuando un centavo de dólar vale ~Bs 9), la deuda se da por saldada. Pagando en la misma moneda no se perdona ni un céntimo.
+- **Las compras no se anulan.** Un error de carga se corrige con un ajuste de inventario; si hace falta, se agregará la anulación de compras más adelante (requiere decidir qué pasa con los pagos ya hechos).
+- **No se actualizan precios de venta al comprar:** la ficha muestra el nuevo costo y el margen; el ajuste masivo de precios llega en la Fase 5.
+- **Menú en teléfono:** con más módulos, la barra inferior se desliza de lado.
+- **Base de datos v4:** se agregaron proveedores, compras, sus líneas y los pagos a proveedores.
+
 ---
 
 ## 11. Estrategia de pruebas

@@ -3,6 +3,8 @@ import { esquemaCaja } from '../../modulos/caja/esquema';
 import type { Gasto, MovimientoCaja, SesionCaja } from '../../modulos/caja/tipos';
 import { esquemaClientes } from '../../modulos/clientes/esquema';
 import type { Cliente, MovimientoCuenta } from '../../modulos/clientes/tipos';
+import { esquemaCompras } from '../../modulos/compras/esquema';
+import type { Compra, CompraItem, PagoProveedor, Proveedor } from '../../modulos/compras/tipos';
 import { esquemaInventario } from '../../modulos/inventario/esquema';
 import type { Categoria, MovimientoInventario, Presentacion, Producto } from '../../modulos/inventario/tipos';
 import { esquemaVentas } from '../../modulos/ventas/esquema';
@@ -46,6 +48,10 @@ export class BaseDatos extends Dexie {
   gastos!: EntityTable<Gasto, 'id'>;
   clientes!: EntityTable<Cliente, 'id'>;
   movimientosCuenta!: EntityTable<MovimientoCuenta, 'id'>;
+  proveedores!: EntityTable<Proveedor, 'id'>;
+  compras!: EntityTable<Compra, 'id'>;
+  compraItems!: EntityTable<CompraItem, 'id'>;
+  pagosProveedor!: EntityTable<PagoProveedor, 'id'>;
 
   constructor(nombre = NOMBRE_BASE_DATOS) {
     super(nombre);
@@ -55,6 +61,8 @@ export class BaseDatos extends Dexie {
     this.version(2).stores({ ...esquemaVentas, ...esquemaCaja });
     // v3 (Fase 3): clientes y fiao.
     this.version(3).stores(esquemaClientes);
+    // v4 (Fase 4): compras y proveedores.
+    this.version(4).stores(esquemaCompras);
   }
 }
 

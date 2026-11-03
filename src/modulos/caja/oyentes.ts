@@ -3,6 +3,8 @@ import { db } from '../../core/db/db';
 import { nuevoRegistro } from '../../core/db/registro';
 import { suscribir } from '../../core/eventos/bus';
 import { esDeCuenta, METODOS_PAGO } from '../../core/pagos';
+import { usdABs } from '../../core/dinero/dinero';
+import type { Compra, PagoProveedor } from '../compras/tipos';
 import type { MovimientoCaja } from './tipos';
 
 /**
@@ -68,6 +70,28 @@ export function registrarOyentesCaja(): void {
       }) satisfies MovimientoCaja,
     );
   });
+
+  // Pagos a proveedores hechos con dinero de la gaveta.
+  const pagoAProveedor = async ({ compra, pago }: { compra: Compra; pago: PagoProveedor | null }) => {
+    if (!pago?.desdeCaja || !pago.sesionCajaId) return;
+    const moneda = METODOS_PAGO[pago.metodo].moneda;
+    await db.movimientosCaja.add(
+      nuevoRegistro({
+        sesionCajaId: pago.sesionCajaId,
+        tipo: 'pago_proveedor' as const,
+        metodo: pago.metodo,
+        moneda,
+        monto: -pago.monto,
+        equivalenteBs: -(moneda === 'USD' ? usdABs(pago.monto, pago.tasa) : pago.monto),
+        documentoTipo: 'compra',
+        documentoId: compra.id,
+        descripcion: `Pago compra ${compra.numero}`,
+        usuarioId: pago.usuarioId,
+      }) satisfies MovimientoCaja,
+    );
+  };
+  suscribir('compra.registrada', pagoAProveedor);
+  suscribir('pago_proveedor.registrado', pagoAProveedor);
 
   suscribir('abono.registrado', async ({ movimiento, cliente, sesionCajaId, metodo, monto, equivalenteBs }) => {
     await db.movimientosCaja.add(

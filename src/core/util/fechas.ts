@@ -23,6 +23,12 @@ export function diasEntre(a: string, b: string): number {
   return Math.round(ms / 86_400_000);
 }
 
+/** Suma (o resta) días a una fecha `AAAA-MM-DD`. */
+export function sumarDias(fecha: string, dias: number): string {
+  const [a, m, d] = fecha.split('-').map(Number) as [number, number, number];
+  return hoyLocal(new Date(a, m - 1, d + dias));
+}
+
 /** `2026-11-02` → `02/11/2026`. */
 export function formatearFecha(fecha: string): string {
   const [a, m, d] = fecha.slice(0, 10).split('-');

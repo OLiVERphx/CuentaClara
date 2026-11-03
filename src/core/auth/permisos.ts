@@ -17,6 +17,7 @@ export const PERMISOS = {
   'caja.gastos': 'Registrar gastos, retiros e ingresos de caja',
   'clientes.gestionar': 'Crear y editar clientes, y ajustar sus cuentas',
   'clientes.exceder_limite': 'Fiar por encima del límite de crédito',
+  'compras.gestionar': 'Registrar compras, pagos a proveedores y proveedores',
 } as const;
 
 export type Permiso = keyof typeof PERMISOS;
