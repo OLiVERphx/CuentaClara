@@ -8,6 +8,8 @@
   import Modal from '../../../ui/Modal.svelte';
   import { avisarError } from '../../../ui/notificaciones.svelte';
   import { caja } from '../../caja/almacen.svelte';
+  import { clientes } from '../../clientes/almacen.svelte';
+  import SelectorCliente from '../../clientes/pantallas/SelectorCliente.svelte';
   import { inventario } from '../../inventario/almacen.svelte';
   import type { Presentacion, Producto } from '../../inventario/tipos';
   import { ticket } from '../almacen.svelte';
@@ -123,6 +125,7 @@
       ultima = await registrarVenta({
         lineas: ticket.lineas.map((l) => ({ productoId: l.productoId, presentacionId: l.presentacionId, cantidad: l.cantidad })),
         pagos,
+        clienteId: ticket.clienteId,
       });
       ticket.vaciar();
       verUltima = true;
@@ -209,6 +212,7 @@
         <button class="btn btn-fantasma btn-chico" onclick={() => ticket.vaciar()}><Icono nombre="basura" tamano={16} /> Vaciar</button>
       {/if}
     </div>
+    <SelectorCliente bind:clienteId={ticket.clienteId} />
 
     {#if lineas.length === 0}
       <p class="vacio">Busca un producto y presiona Enter para agregarlo.</p>
@@ -264,7 +268,7 @@
 </div>
 
 {#if cobrando && tasa !== null}
-  <Cobro {totales} {tasa} {redondeo} onConfirmar={confirmar} onCerrar={() => (cobrando = false)} />
+  <Cobro {totales} {tasa} {redondeo} cliente={clientes.obtener(ticket.clienteId)} onConfirmar={confirmar} onCerrar={() => (cobrando = false)} />
 {/if}
 
 <Modal bind:abierto={verUltima} titulo="Venta registrada">

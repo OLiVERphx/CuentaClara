@@ -18,6 +18,8 @@ export interface ResumenCaja {
   ventas: number;
   /** Ventas netas (cobros − vueltos − anulaciones − devoluciones), en Bs. */
   vendidoBs: Centimos;
+  /** Abonos de clientes a su deuda (cobro de fiao). */
+  abonosBs: Centimos;
   gastosBs: Centimos;
   retirosBs: Centimos;
 }
@@ -33,6 +35,7 @@ export function resumirCaja(sesion: Pick<SesionCaja, 'fondoBs' | 'fondoUsd'>, mo
   const vendidas = new Set<string>();
   const anuladas = new Set<string>();
   let vendidoBs = 0;
+  let abonosBs = 0;
   let gastosBs = 0;
   let retirosBs = 0;
 
@@ -46,6 +49,7 @@ export function resumirCaja(sesion: Pick<SesionCaja, 'fondoBs' | 'fondoUsd'>, mo
     if (TIPOS_DE_VENTA.has(m.tipo)) vendidoBs += m.equivalenteBs;
     if (m.tipo === 'venta' && m.documentoId) vendidas.add(m.documentoId);
     if (m.tipo === 'anulacion' && m.documentoId) anuladas.add(m.documentoId);
+    if (m.tipo === 'abono_cliente') abonosBs += m.equivalenteBs;
     if (m.tipo === 'gasto') gastosBs -= m.equivalenteBs;
     if (m.tipo === 'retiro_dueno') retirosBs -= m.equivalenteBs;
   }
@@ -59,6 +63,7 @@ export function resumirCaja(sesion: Pick<SesionCaja, 'fondoBs' | 'fondoUsd'>, mo
     esperadoUsd: sesion.fondoUsd + totales.get('efectivo_usd')!.neto,
     ventas,
     vendidoBs,
+    abonosBs,
     gastosBs,
     retirosBs,
   };

@@ -183,10 +183,16 @@
 
   <div class="datos">
     <div class="tarjeta dato">
-      <span class="suave">Ventas</span>
-      <strong class="num">{resumen.ventas}</strong>
-      <span class="ayuda num">{formatearBs(resumen.vendidoBs)}</span>
+      <span class="suave">Cobrado en ventas</span>
+      <strong class="num">{formatearBs(resumen.vendidoBs)}</strong>
+      <span class="ayuda">{resumen.ventas} {resumen.ventas === 1 ? 'venta' : 'ventas'} (sin contar lo fiado)</span>
     </div>
+    {#if resumen.abonosBs}
+      <div class="tarjeta dato">
+        <span class="suave">Abonos de fiao</span>
+        <strong class="num">{formatearBs(resumen.abonosBs)}</strong>
+      </div>
+    {/if}
     <div class="tarjeta dato destacado">
       <span class="suave">Efectivo Bs en gaveta</span>
       <strong class="num">{formatearBs(resumen.esperadoBs)}</strong>

@@ -9,6 +9,7 @@
   import Modal from '../../../ui/Modal.svelte';
   import { avisar, avisarError } from '../../../ui/notificaciones.svelte';
   import { caja } from '../../caja/almacen.svelte';
+  import { clientes } from '../../clientes/almacen.svelte';
   import { parteDeLinea } from '../calculos';
   import { anularVenta, obtenerVenta, registrarDevolucion, type VentaCompleta } from '../servicio';
   import Comprobante from './Comprobante.svelte';
@@ -57,7 +58,10 @@
   let cantidades = $state<Record<string, string>>({});
   let metodoDevolucion = $state<MetodoPago>('efectivo_bs');
   let motivoDevolucion = $state('');
-  const METODOS_DEVOLUCION: MetodoPago[] = ['efectivo_bs', 'pago_movil', 'efectivo_usd'];
+  // Con cliente, la devolución puede quedar como saldo a favor (si la venta fue fiada, baja la deuda).
+  const METODOS_DEVOLUCION = $derived<MetodoPago[]>(
+    completa?.venta.clienteId ? ['saldo_a_favor', 'efectivo_bs', 'pago_movil', 'efectivo_usd'] : ['efectivo_bs', 'pago_movil', 'efectivo_usd'],
+  );
 
   const vistaDevolucion = $derived.by(() => {
     let montoBs = 0;
@@ -87,6 +91,7 @@
   function abrirDevolucion() {
     cantidades = {};
     motivoDevolucion = '';
+    metodoDevolucion = METODOS_DEVOLUCION[0]!;
     devolverAbierto = true;
   }
 
@@ -139,7 +144,7 @@
   </div>
 
   <div class="detalle">
-    <Comprobante {completa} negocio={app.negocio} />
+    <Comprobante {completa} negocio={app.negocio} clienteNombre={clientes.obtener(completa.venta.clienteId)?.nombre ?? null} />
 
     {#if completa.devoluciones.length > 0 || completa.venta.estado === 'anulada'}
       <section class="pila-chica no-imprimir historial">

@@ -1,6 +1,8 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { esquemaCaja } from '../../modulos/caja/esquema';
 import type { Gasto, MovimientoCaja, SesionCaja } from '../../modulos/caja/tipos';
+import { esquemaClientes } from '../../modulos/clientes/esquema';
+import type { Cliente, MovimientoCuenta } from '../../modulos/clientes/tipos';
 import { esquemaInventario } from '../../modulos/inventario/esquema';
 import type { Categoria, MovimientoInventario, Presentacion, Producto } from '../../modulos/inventario/tipos';
 import { esquemaVentas } from '../../modulos/ventas/esquema';
@@ -42,6 +44,8 @@ export class BaseDatos extends Dexie {
   sesionesCaja!: EntityTable<SesionCaja, 'id'>;
   movimientosCaja!: EntityTable<MovimientoCaja, 'id'>;
   gastos!: EntityTable<Gasto, 'id'>;
+  clientes!: EntityTable<Cliente, 'id'>;
+  movimientosCuenta!: EntityTable<MovimientoCuenta, 'id'>;
 
   constructor(nombre = NOMBRE_BASE_DATOS) {
     super(nombre);
@@ -49,6 +53,8 @@ export class BaseDatos extends Dexie {
     this.version(1).stores({ ...esquemaNucleo, ...esquemaInventario });
     // v2 (Fase 2): ventas y caja.
     this.version(2).stores({ ...esquemaVentas, ...esquemaCaja });
+    // v3 (Fase 3): clientes y fiao.
+    this.version(3).stores(esquemaClientes);
   }
 }
 

@@ -39,6 +39,7 @@ src/
 ├── modulos/
 │   ├── inventario/       productos, presentaciones, búsqueda, ajustes, kardex, importación CSV
 │   ├── ventas/           ticket, cobro mixto y vuelto, comprobante, anulación, devolución
+│   ├── clientes/         clientes, fiao en USD, saldo a favor, abonos y ajustes
 │   └── caja/             apertura, resumen por método, gastos, retiros, cierre con arqueo
 ├── app/                  arranque, rutas, estado global, menú y pantallas del núcleo
 └── ui/                   componentes compartidos

@@ -6,7 +6,7 @@ import { marcarCambio, nuevoRegistro, vigente } from '../../core/db/registro';
 import { formatearBs, formatearCantidad, formatearUsd, redondearAPaso, type Milesimas } from '../../core/dinero/dinero';
 import { ErrorNegocio } from '../../core/errores';
 import { emitir } from '../../core/eventos/bus';
-import { METODOS_PAGO, type MetodoPago } from '../../core/pagos';
+import { esDeCuenta, METODOS_PAGO, type MetodoPago } from '../../core/pagos';
 import { obtenerTasaAplicada } from '../../core/tasa/servicio';
 import { ahoraIso, hoyLocal } from '../../core/util/fechas';
 import { uuidv7 } from '../../core/util/id';
@@ -73,10 +73,18 @@ function validarPagos(pagos: PagoTicket[]): void {
  * Registra una venta completa en una sola transacción (DISENO.md §6.3). Los
  * precios se toman de la base de datos en ese momento, no de la pantalla.
  */
-export async function registrarVenta(datos: { lineas: EntradaTicket[]; pagos: PagoTicket[]; notas?: string }): Promise<VentaCompleta> {
+export async function registrarVenta(datos: {
+  lineas: EntradaTicket[];
+  pagos: PagoTicket[];
+  clienteId?: string | null;
+  notas?: string;
+}): Promise<VentaCompleta> {
   const usuario = exigirSesion();
   if (datos.lineas.length === 0) throw new ErrorNegocio('El ticket está vacío.');
   validarPagos(datos.pagos);
+  if (!datos.clienteId && datos.pagos.some((p) => esDeCuenta(p.metodo))) {
+    throw new ErrorNegocio('Para fiar o usar saldo a favor, elige el cliente.');
+  }
 
   const resultado = await db.transaction('rw', db.tables, async () => {
     const tasa = await obtenerTasaAplicada();
@@ -118,7 +126,7 @@ export async function registrarVenta(datos: { lineas: EntradaTicket[]; pagos: Pa
       usuarioId: usuario.id,
       usuarioNombre: usuario.nombre,
       sesionCajaId: sesion.id,
-      clienteId: null,
+      clienteId: datos.clienteId ?? null,
       tasa: tasa.aplicada,
       tasaFechaValor: tasa.tasa.fechaValor,
       pasoRedondeo: redondeo.paso,
@@ -218,6 +226,10 @@ export async function registrarDevolucion(datos: {
   const resultado = await db.transaction('rw', db.tables, async () => {
     const venta = await db.ventas.get(datos.ventaId);
     if (!venta || venta.estado !== 'completada') throw new ErrorNegocio('Solo se puede devolver de una venta completada.');
+    if (datos.metodo === 'credito') throw new ErrorNegocio('Una devolución no se puede fiar.');
+    if (datos.metodo === 'saldo_a_favor' && !venta.clienteId) {
+      throw new ErrorNegocio('Esta venta no tiene cliente: no se puede dejar saldo a favor.');
+    }
     const sesion = await exigirCajaAbierta();
     const negocio = await leerNegocio();
     const vendidos = new Map((await db.ventaItems.where('ventaId').equals(venta.id).toArray()).map((i) => [i.id, i]));

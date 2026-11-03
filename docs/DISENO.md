@@ -349,6 +349,21 @@ Se calcula por método y por moneda. El usuario cuenta el efectivo, el sistema m
 - **El fiao (crédito) llega en la Fase 3** junto con los clientes; por eso aún no aparece como método de pago.
 - **Base de datos v2:** se agregaron las tablas de ventas y caja; los datos de la Fase 1 se conservan al actualizar.
 
+### Fase 3 — terminada (2026-11-02)
+- [x] Clientes con cédula, teléfono, nota y límite de crédito opcional.
+- [x] Fiar total o parcial desde el cobro («Fiar a …»), con la deuda en USD (D11).
+- [x] Saldo a favor: dejar el vuelto a favor, usarlo en otra compra y devolver productos a saldo a favor.
+- [x] Abonos en cualquier método (los de Bs se convierten con la tasa del día) que entran a la caja.
+- [x] Ajustes de cuenta (por ejemplo, para cargar las deudas del cuaderno), auditados.
+- [x] Anular una venta fiada borra el cargo; superar el límite deshace la venta entera, salvo que la autorice el dueño.
+
+**Decisiones tomadas al implementarla:**
+- **El fiao es un método de pago** (`credito`) y el saldo a favor otro (`saldo_a_favor`), ambos en USD y marcados como «de cuenta»: no pasan por la caja. Así heredan pagos mixtos, anulación y devolución sin código especial.
+- **Saldo guardado en el cliente** (`saldoUsd`), actualizado en la misma transacción que cada movimiento, para listar deudores sin recorrer el historial. Positivo = debe; negativo = a favor.
+- **La caja muestra «Cobrado en ventas»** (sin lo fiado) y los abonos de fiao por separado.
+- **El recordatorio por WhatsApp** sigue pospuesto, como se acordó.
+- **Base de datos v3:** se agregaron clientes y movimientos de cuenta.
+
 ---
 
 ## 11. Estrategia de pruebas

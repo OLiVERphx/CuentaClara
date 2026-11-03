@@ -12,6 +12,8 @@ export interface EntradaTicketUI {
 /** Ticket en curso. Vive en memoria: sobrevive a cambiar de pantalla, no a recargar. */
 class Ticket {
   lineas = $state<EntradaTicketUI[]>([]);
+  /** Cliente de la venta: obligatorio solo para fiar o usar saldo a favor. */
+  clienteId = $state<string | null>(null);
 
   /** Agrega una unidad (o 1 kg) o suma a la línea existente. Devuelve la clave de la línea. */
   agregar(productoId: string, presentacionId: string | null): string {
@@ -40,6 +42,7 @@ class Ticket {
 
   vaciar(): void {
     this.lineas.length = 0;
+    this.clienteId = null;
   }
 }
 

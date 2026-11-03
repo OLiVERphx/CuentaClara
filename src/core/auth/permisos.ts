@@ -15,6 +15,8 @@ export const PERMISOS = {
   'ventas.anular': 'Anular ventas',
   'ventas.devolver': 'Registrar devoluciones',
   'caja.gastos': 'Registrar gastos, retiros e ingresos de caja',
+  'clientes.gestionar': 'Crear y editar clientes, y ajustar sus cuentas',
+  'clientes.exceder_limite': 'Fiar por encima del límite de crédito',
 } as const;
 
 export type Permiso = keyof typeof PERMISOS;

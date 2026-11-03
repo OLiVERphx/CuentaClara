@@ -26,6 +26,7 @@ export const TIPOS_MOVIMIENTO_CAJA = {
   vuelto: 'Vuelto',
   anulacion: 'Anulación de venta',
   devolucion: 'Devolución',
+  abono_cliente: 'Abono de cliente',
   gasto: 'Gasto',
   retiro_dueno: 'Retiro del dueño',
   ingreso_extra: 'Ingreso',

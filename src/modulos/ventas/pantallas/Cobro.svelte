@@ -2,19 +2,24 @@
   import { onMount, tick } from 'svelte';
   import { ESCALA, formatearBs, formatearParaEditar, formatearTasa, formatearUsd, parsearDecimal, type Redondeo, type Tasa4 } from '../../../core/dinero/dinero';
   import { formatearMonto, METODOS_PAGO, ORDEN_METODOS, type MetodoPago } from '../../../core/pagos';
+  import { puede } from '../../../app/estado.svelte';
   import Icono from '../../../ui/Icono.svelte';
+  import type { Cliente } from '../../clientes/tipos';
   import { estadoCobro, monedaDe, montoSugerido, type PagoTicket, type Totales } from '../calculos';
 
   let {
     totales,
     tasa,
     redondeo,
+    cliente,
     onConfirmar,
     onCerrar,
   }: {
     totales: Totales;
     tasa: Tasa4;
     redondeo: Redondeo;
+    /** Con cliente aparecen «Fiar», «Saldo a favor» y «Dejar el vuelto a favor». */
+    cliente: Cliente | null;
     onConfirmar: (pagos: PagoTicket[]) => Promise<boolean>;
     onCerrar: () => void;
   } = $props();
@@ -46,12 +51,19 @@
   const estado = $derived(estadoCobro(totales, pagos.filter((p) => p.monto > 0), tasa, redondeo.paso));
   const listo = $derived(estado.cuadrado && invalidas === 0 && !confirmando);
 
+  const saldoAFavor = $derived(cliente && cliente.saldoUsd < 0 ? -cliente.saldoUsd : 0);
+  const fiado = $derived(pagos.filter((p) => p.metodo === 'credito').reduce((s, p) => s + p.monto, 0));
+  const superaLimite = $derived(
+    cliente !== null && cliente.limiteCreditoUsd !== null && fiado > 0 && cliente.saldoUsd + fiado > cliente.limiteCreditoUsd,
+  );
+
   onMount(() => {
     dialogo.showModal();
   });
 
   async function agregar(metodo: MetodoPago, esVuelto = false) {
-    const monto = montoSugerido(metodo, estado, esVuelto, redondeo);
+    let monto = montoSugerido(metodo, estado, esVuelto, redondeo);
+    if (metodo === 'saldo_a_favor' && !esVuelto) monto = Math.min(monto, saldoAFavor);
     const id = siguienteId++;
     lineas.push({ id, metodo, esVuelto, texto: monto > 0 ? formatearParaEditar(monto, ESCALA.centavos) : '', referencia: '', banco: '' });
     await tick();
@@ -97,8 +109,27 @@
             {METODOS_PAGO[metodo].nombre}
           </button>
         {/each}
+        {#if cliente}
+          <button type="button" class="btn metodo metodo-cuenta" onclick={() => agregar('credito')}>Fiar a {cliente.nombre.split(' ')[0]}</button>
+          {#if saldoAFavor > 0}
+            <button type="button" class="btn metodo metodo-cuenta" onclick={() => agregar('saldo_a_favor')}>
+              Usar saldo a favor ({formatearUsd(saldoAFavor)})
+            </button>
+          {/if}
+        {/if}
       </div>
+      {#if !cliente}<p class="ayuda">Para fiar, cierra y elige el cliente en el ticket.</p>{/if}
     </div>
+
+    {#if superaLimite && cliente}
+      <div class="alerta" class:alerta-aviso={puede('clientes.exceder_limite')} class:alerta-peligro={!puede('clientes.exceder_limite')}>
+        <Icono nombre="alerta" />
+        <span>
+          {cliente.nombre} quedaría debiendo {formatearUsd(cliente.saldoUsd + fiado)} y su límite es {formatearUsd(cliente.limiteCreditoUsd ?? 0)}.
+          {puede('clientes.exceder_limite') ? 'Como dueño, puedes autorizarlo.' : 'Solo el dueño puede autorizarlo.'}
+        </span>
+      </div>
+    {/if}
 
     {#if lineas.length > 0}
       <ul class="lineas">
@@ -156,6 +187,9 @@
           <button type="button" class="btn" onclick={() => agregar('efectivo_bs', true)}>Vuelto en efectivo Bs</button>
           <button type="button" class="btn" onclick={() => agregar('efectivo_usd', true)}>Vuelto en $</button>
           <button type="button" class="btn" onclick={() => agregar('pago_movil', true)}>Vuelto por pago móvil</button>
+          {#if cliente}
+            <button type="button" class="btn metodo-cuenta" onclick={() => agregar('saldo_a_favor', true)}>Dejar a favor de {cliente.nombre.split(' ')[0]}</button>
+          {/if}
         </div>
       </div>
     {/if}
@@ -241,6 +275,12 @@
 
   .metodo {
     flex: 1 1 120px;
+  }
+
+  .metodo-cuenta {
+    border-style: dashed;
+    border-color: var(--primario);
+    color: var(--primario);
   }
 
   .lineas {

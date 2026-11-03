@@ -4,6 +4,7 @@
   import { METODOS_PAGO } from '../../../core/pagos';
   import { hoyLocal } from '../../../core/util/fechas';
   import { caja } from '../../caja/almacen.svelte';
+  import { clientes } from '../../clientes/almacen.svelte';
   import { ventasDelDia } from '../servicio';
   import type { Pago, Venta } from '../tipos';
 
@@ -84,7 +85,10 @@
         {#each filas as { venta, pagos } (venta.id)}
           <tr class="clicable" class:anulada={venta.estado === 'anulada'} onclick={() => navegar(`/ventas/${venta.id}`)}>
             <td class="num">{hora(venta.creadoEn)}</td>
-            <td><a href="#/ventas/{venta.id}" class="mono" onclick={(e) => e.stopPropagation()}>{venta.numero}</a></td>
+            <td>
+              <a href="#/ventas/{venta.id}" class="mono" onclick={(e) => e.stopPropagation()}>{venta.numero}</a>
+              {#if venta.clienteId}<span class="ayuda"> · {clientes.obtener(venta.clienteId)?.nombre}</span>{/if}
+            </td>
             <td class="ocultable suave">{metodos(pagos)}</td>
             <td class="derecha num">{formatearBs(venta.totalBs)}</td>
             <td class="derecha num ocultable">{formatearUsd(venta.totalUsd)}</td>

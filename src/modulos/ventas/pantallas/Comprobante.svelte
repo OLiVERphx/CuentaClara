@@ -5,7 +5,11 @@
   import { formatearFecha, formatearFechaHora } from '../../../core/util/fechas';
   import type { VentaCompleta } from '../servicio';
 
-  let { completa, negocio }: { completa: VentaCompleta; negocio: ConfigNegocio | null } = $props();
+  let {
+    completa,
+    negocio,
+    clienteNombre = null,
+  }: { completa: VentaCompleta; negocio: ConfigNegocio | null; clienteNombre?: string | null } = $props();
 
   const v = $derived(completa.venta);
   const cobros = $derived(completa.pagos.filter((p) => !p.esVuelto));
@@ -24,6 +28,7 @@
   <div class="fila-c"><span>Comprobante</span><strong class="mono">{v.numero}</strong></div>
   <div class="fila-c"><span>Fecha</span><span>{formatearFechaHora(v.creadoEn)}</span></div>
   <div class="fila-c"><span>Atendió</span><span>{v.usuarioNombre}</span></div>
+  {#if clienteNombre}<div class="fila-c"><span>Cliente</span><strong>{clienteNombre}</strong></div>{/if}
   {#if v.estado === 'anulada'}
     <div class="sello">ANULADA</div>
     <p class="nota">Motivo: {v.motivoAnulacion}</p>
