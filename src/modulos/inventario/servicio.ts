@@ -4,7 +4,7 @@ import { exigirPermiso, usuarioEnSesion } from '../../core/auth/permisos';
 import { leerDispositivo } from '../../core/config/config';
 import { db, siguienteNumero } from '../../core/db/db';
 import { marcarCambio, nuevoRegistro, vigente } from '../../core/db/registro';
-import { costoPromedio, formatearCantidad, type Diezmilesimas, type Milesimas } from '../../core/dinero/dinero';
+import { costoPromedio, formatearCantidad, proporcional, type Diezmilesimas, type Milesimas } from '../../core/dinero/dinero';
 import { ErrorNegocio } from '../../core/errores';
 import { emitir } from '../../core/eventos/bus';
 import { limpiar, normalizar } from '../../core/util/texto';
@@ -392,6 +392,35 @@ export async function obtenerProductos(ids: string[]): Promise<{ productos: Prod
   const productos = (await db.productos.bulkGet(ids)).filter((p): p is Producto => p !== undefined);
   const presentaciones = (await db.presentaciones.where('productoId').anyOf(ids).toArray()).filter(vigente);
   return { productos, presentaciones };
+}
+
+/**
+ * Ajuste masivo de precios en una sola transacción. Las presentaciones con
+ * precio propio se ajustan en la misma proporción que el precio base.
+ */
+export async function ajustarPrecios(cambios: { productoId: string; precio: number }[], motivo: string): Promise<number> {
+  exigirPermiso('productos.editar');
+  if (cambios.length === 0) throw new ErrorNegocio('No hay precios que cambiar.');
+  for (const c of cambios) {
+    if (!esEnteroNoNegativo(c.precio) || c.precio === 0) throw new ErrorNegocio('Un precio nuevo no es válido.');
+  }
+  const ids = await db.transaction('rw', tablas(), async () => {
+    const tocados: string[] = [];
+    for (const c of cambios) {
+      const actual = await db.productos.get(c.productoId);
+      if (!actual || !vigente(actual) || actual.precio === c.precio) continue;
+      await db.productos.put({ ...actual, precio: c.precio, ...marcarCambio(actual) });
+      for (const p of (await db.presentaciones.where('productoId').equals(actual.id).toArray()).filter(vigente)) {
+        if (p.precio === null || actual.precio === 0) continue;
+        await db.presentaciones.put({ ...p, precio: proporcional(p.precio, c.precio, actual.precio), ...marcarCambio(p) });
+      }
+      tocados.push(actual.id);
+    }
+    await auditar({ entidad: 'producto', entidadId: 'ajuste_masivo', accion: 'ajustar_precios', despues: { cantidad: tocados.length, motivo, cambios } });
+    return tocados;
+  });
+  await emitir('inventario.cambiado', { productoIds: ids });
+  return ids.length;
 }
 
 export interface FilaImportacion {

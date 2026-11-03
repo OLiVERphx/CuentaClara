@@ -83,4 +83,4 @@ export async function guardarDispositivo(dispositivo: ConfigDispositivo): Promis
 }
 
 /** Claves de configuración que pertenecen al equipo y no viajan en un respaldo restaurado. */
-export const CLAVES_LOCALES = new Set([CLAVE_DISPOSITIVO, 'bloqueoPin', 'ultimaConsultaTasa']);
+export const CLAVES_LOCALES = new Set([CLAVE_DISPOSITIVO, 'bloqueoPin', 'ultimaConsultaTasa', 'respaldoAuto']);

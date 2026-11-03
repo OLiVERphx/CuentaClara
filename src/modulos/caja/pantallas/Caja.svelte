@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { puede } from '../../../app/estado.svelte';
+  import { app, puede } from '../../../app/estado.svelte';
+  import { ejecutarRespaldoAutomatico, leerRespaldoAuto, prepararPermiso, type ConfigRespaldoAuto } from '../../../core/respaldo/automatico';
+  import { diasEntre, hoyLocal } from '../../../core/util/fechas';
+  import { descargarArchivo } from '../../../ui/descargar';
   import { ESCALA, formatearBs, formatearUsd, parsearDecimal } from '../../../core/dinero/dinero';
   import { formatearMonto, METODOS_PAGO, ORDEN_METODOS, type MetodoPago } from '../../../core/pagos';
   import { formatearFechaHora } from '../../../core/util/fechas';
@@ -115,6 +118,8 @@
     if (contado.bs === null || contado.usd === null) return;
     procesando = true;
     try {
+      // Antes de cualquier otra espera: el permiso de la carpeta solo se puede pedir junto al clic.
+      await prepararPermiso();
       const s = await cerrarCaja({ contadoBs: contado.bs, contadoUsd: contado.usd, nota });
       const difBs = s.contadoBs! - s.esperadoBs!;
       const difUsd = s.contadoUsd! - s.esperadoUsd!;
@@ -126,12 +131,24 @@
         8000,
       );
       cierreAbierto = false;
+      const respaldo = await ejecutarRespaldoAutomatico();
+      if (respaldo.estado === 'guardado') avisar(`Respaldo guardado en «${respaldo.carpeta}».`);
+      else if (respaldo.estado === 'descargar') {
+        descargarArchivo(respaldo.archivo, respaldo.nombre);
+        avisar('Respaldo descargado: guárdalo fuera del equipo.', 'info', 6000);
+      } else if (respaldo.estado === 'error') avisar(respaldo.mensaje, 'error', 8000);
+      respaldoAuto = await leerRespaldoAuto();
     } catch (err) {
       avisarError(err);
     } finally {
       procesando = false;
     }
   }
+
+  // Recordatorio de respaldo cuando el automático está apagado o el último es viejo.
+  let respaldoAuto = $state<ConfigRespaldoAuto | null>(null);
+  void leerRespaldoAuto().then((r) => (respaldoAuto = r));
+  const diasSinRespaldo = $derived(respaldoAuto?.ultimo ? diasEntre(hoyLocal(new Date(respaldoAuto.ultimo)), app.hoy) : null);
 
   function hora(iso: string): string {
     const d = new Date(iso);
@@ -156,6 +173,18 @@
     </div>
   {/if}
 </div>
+
+{#if respaldoAuto && puede('respaldo.gestionar') && (!respaldoAuto.activo || (diasSinRespaldo !== null && diasSinRespaldo > 3))}
+  <div class="alerta alerta-aviso aviso-respaldo">
+    <Icono nombre="nube" />
+    <span>
+      {respaldoAuto.activo
+        ? `Tu último respaldo fue hace ${diasSinRespaldo} días.`
+        : 'El respaldo automático está apagado: si el equipo se daña, perderías tus datos.'}
+    </span>
+    <a class="btn btn-chico" href="#/config?seccion=respaldo">{respaldoAuto.activo ? 'Respaldar' : 'Activarlo'}</a>
+  </div>
+{/if}
 
 {#if !caja.sesion}
   <form class="tarjeta pila apertura" onsubmit={abrir}>
@@ -399,6 +428,15 @@
 <style>
   .apertura {
     max-width: 560px;
+  }
+
+  .aviso-respaldo {
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .aviso-respaldo span {
+    flex: 1;
   }
 
   .datos {

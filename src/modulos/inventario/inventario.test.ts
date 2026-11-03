@@ -6,9 +6,10 @@ import { ErrorNegocio, ErrorPermiso } from '../../core/errores';
 import { reiniciarBase, sesionDePrueba } from '../../test/util';
 import { IndiceProductos } from './busqueda';
 import { decodificar, detectarSeparador, generarPlantilla, parsearCsv, validarCsv } from './csv';
-import { enBs, estadoStock, precioEnBs, precioPresentacion, subtotalEnBs } from './precios';
+import { enBs, estadoStock, nuevoPrecio, precioEnBs, precioPresentacion, subtotalEnBs } from './precios';
 import {
   actualizarProducto,
+  ajustarPrecios,
   crearCategoria,
   crearProducto,
   importarProductos,
@@ -56,6 +57,18 @@ describe('precios', () => {
     const queso = precioEnBs(800, 'USD', 8_895_754, alBolivar);
     expect(queso).toBe(711_700);
     expect(subtotalEnBs(queso, 350, alBolivar)).toBe(249_100);
+  });
+
+  it('calcula precios nuevos por porcentaje o por margen', () => {
+    const p = { precio: 125, costoPromedio: 10_000, monedaPrecio: 'USD' as const };
+    expect(nuevoPrecio(p, { tipo: 'porcentaje', centesimas: 1000 }, 1)).toBe(138); // +10 % = 1,375 → hacia arriba
+    expect(nuevoPrecio(p, { tipo: 'porcentaje', centesimas: 1000 }, 5)).toBe(140); // a $0,05
+    expect(nuevoPrecio(p, { tipo: 'porcentaje', centesimas: -2000 }, 1)).toBe(100);
+    expect(nuevoPrecio(p, { tipo: 'margen', centesimas: 2000 }, 1)).toBe(125); // $1 ÷ 0,8
+    expect(nuevoPrecio(p, { tipo: 'margen', centesimas: 3000 }, 5)).toBe(145); // 1,4286 → 1,45
+    expect(nuevoPrecio({ ...p, costoPromedio: 0 }, { tipo: 'margen', centesimas: 2000 }, 1)).toBeNull();
+    expect(nuevoPrecio({ ...p, monedaPrecio: 'VES' }, { tipo: 'margen', centesimas: 2000 }, 1)).toBeNull();
+    expect(nuevoPrecio(p, { tipo: 'margen', centesimas: 10_000 }, 1)).toBeNull();
   });
 
   it('calcula el precio de una presentación', () => {
@@ -158,6 +171,20 @@ describe('servicio de inventario', () => {
     const [ultimo] = await listarMovimientos(p.id, 1);
     expect(ultimo).toMatchObject({ tipo: 'ajuste_negativo', cantidad: -3000, motivo: 'Conteo físico: 7' });
     await expect(registrarConteo(p.id, 7000)).rejects.toThrow(ErrorNegocio);
+  });
+
+  it('el ajuste masivo cambia precios y escala las presentaciones con precio propio', async () => {
+    const p = await crearProducto(base, [
+      { nombre: 'Bulto x20', factor: 20_000, precio: 2400, codigoBarras: '', paraVenta: true, paraCompra: true },
+      { nombre: 'Media docena', factor: 6000, precio: null, codigoBarras: '', paraVenta: true, paraCompra: false },
+    ]);
+    expect(await ajustarPrecios([{ productoId: p.id, precio: 150 }], 'Aumento del proveedor')).toBe(1);
+    const { productos, presentaciones } = await obtenerCatalogo();
+    expect(productos[0]!.precio).toBe(150);
+    expect(presentaciones.find((x) => x.nombre === 'Bulto x20')!.precio).toBe(2880); // +20 %
+    expect(presentaciones.find((x) => x.nombre === 'Media docena')!.precio).toBeNull();
+    sesionDePrueba('cajero');
+    await expect(ajustarPrecios([{ productoId: p.id, precio: 200 }], 'x')).rejects.toThrow(ErrorPermiso);
   });
 
   it('las categorías no se duplican por mayúsculas o acentos', async () => {

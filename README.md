@@ -41,6 +41,7 @@ src/
 │   ├── ventas/           ticket, cobro mixto y vuelto, comprobante, anulación, devolución
 │   ├── clientes/         clientes, fiao en USD, saldo a favor, abonos y ajustes
 │   ├── compras/          proveedores, compras, cuentas por pagar y pagos a proveedores
+│   ├── reportes/         ventas, ganancias, métodos de pago y productos por período (solo lectura)
 │   └── caja/             apertura, resumen por método, gastos, retiros, cierre con arqueo
 ├── app/                  arranque, rutas, estado global, menú y pantallas del núcleo
 └── ui/                   componentes compartidos

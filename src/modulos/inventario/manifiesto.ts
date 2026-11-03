@@ -2,6 +2,7 @@ import type { ManifiestoModulo } from '../../app/modulos';
 import { suscribir } from '../../core/eventos/bus';
 import { inventario } from './almacen.svelte';
 import { registrarOyentesInventario } from './oyentes';
+import { contarPorReponer } from './reposicion';
 
 export const manifiestoInventario: ManifiestoModulo = {
   id: 'inventario',
@@ -15,6 +16,13 @@ export const manifiestoInventario: ManifiestoModulo = {
       cargar: () => import('./pantallas/FichaProducto.svelte'),
       permiso: 'productos.editar',
     },
+    // Antes de /productos/:id, para que «precios» no se tome como un id.
+    {
+      patron: '/productos/precios',
+      titulo: 'Ajuste de precios',
+      cargar: () => import('./pantallas/AjustePrecios.svelte'),
+      permiso: 'productos.editar',
+    },
     { patron: '/productos/:id', titulo: 'Producto', cargar: () => import('./pantallas/FichaProducto.svelte') },
     {
       patron: '/inventario',
@@ -22,6 +30,7 @@ export const manifiestoInventario: ManifiestoModulo = {
       cargar: () => import('./pantallas/Ajustes.svelte'),
       permiso: 'inventario.ajustar',
     },
+    { patron: '/inventario/reponer', titulo: 'Por reponer', cargar: () => import('./pantallas/Reponer.svelte') },
     {
       patron: '/inventario/importar',
       titulo: 'Importar productos',
@@ -32,7 +41,17 @@ export const manifiestoInventario: ManifiestoModulo = {
   menu: [
     { ruta: '/precios', titulo: 'Precios', icono: 'buscar', orden: 10 },
     { ruta: '/productos', titulo: 'Productos', icono: 'caja', orden: 20 },
-    { ruta: '/inventario', titulo: 'Inventario', icono: 'inventario', orden: 30, permiso: 'inventario.ajustar' },
+    {
+      ruta: '/inventario',
+      titulo: 'Inventario',
+      icono: 'inventario',
+      orden: 30,
+      permiso: 'inventario.ajustar',
+      insignia: () => {
+        void inventario.version;
+        return contarPorReponer(inventario.indice.todos());
+      },
+    },
   ],
   async iniciar() {
     registrarOyentesInventario();

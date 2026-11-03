@@ -379,6 +379,21 @@ Se calcula por método y por moneda. El usuario cuenta el efectivo, el sistema m
 - **Menú en teléfono:** con más módulos, la barra inferior se desliza de lado.
 - **Base de datos v4:** se agregaron proveedores, compras, sus líneas y los pagos a proveedores.
 
+### Fase 5 — terminada (2026-11-02)
+- [x] Reportes por período (hoy, ayer, 7 y 30 días, este mes o un rango): ventas netas, ticket promedio, ganancia bruta con margen, gastos y ganancia neta; ventas netas por día, cobros por método y productos más vendidos.
+- [x] Foto del negocio: mercancía a costo, productos por reponer, fiao por cobrar y deudas con proveedores.
+- [x] Reposición: agotados, bajo el mínimo o que se acaban en menos de 3 días, con la cantidad sugerida agrupada por proveedor; copiar o imprimir la lista. Aviso con el número en el menú.
+- [x] Ajuste masivo de precios por porcentaje o por margen sobre costo, con vista previa, redondeo y auditoría. Margen visible en la lista de productos.
+- [x] Respaldo automático cifrado al cerrar la caja, en una carpeta elegida (por ejemplo, un pendrive) o como descarga; aviso en la caja si está apagado o es viejo.
+
+**Decisiones tomadas al implementarla:**
+- **La contabilidad de los reportes es en USD** (los costos están en USD). Los gastos en Bs se convierten con la tasa vigente el día de cada gasto.
+- **Gráficos:** una sola serie con un color validado (luminosidad, croma y contraste ≥ 3:1) para cada modo (`--grafico-serie`), columnas finas, rejilla tenue, detalle al pasar el mouse o enfocar con el teclado y vista de tabla. Sin librería de gráficos: HTML y CSS.
+- **Cobros y vueltos por separado:** un vuelto en Bs a un pago en $ no se presenta como «cobro negativo».
+- **Reposición:** cubre 7 días de ventas (según los últimos 14) o el doble del mínimo, lo que sea mayor; redondea hacia arriba a la presentación de compra más grande (bulto) o al medio kilo.
+- **Contraseña del respaldo automático:** se guarda en el equipo para cifrar sin preguntar; protege la copia que sale (el pendrive), no el equipo. Las claves locales (equipo, bloqueo de PIN, esta contraseña) nunca se exportan.
+- **Permiso nuevo `reportes.ver`** (solo el dueño), porque los reportes muestran costos y ganancias.
+
 ---
 
 ## 11. Estrategia de pruebas

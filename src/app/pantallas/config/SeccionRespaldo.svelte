@@ -13,12 +13,19 @@
   import { descargarArchivo } from '../../../ui/descargar';
   import Icono from '../../../ui/Icono.svelte';
   import Modal from '../../../ui/Modal.svelte';
+  import RespaldoAutomatico from './RespaldoAutomatico.svelte';
 
   const NOMBRES_TABLA: Record<string, string> = {
     productos: 'Productos',
     presentaciones: 'Presentaciones',
     categorias: 'Categorías',
     movimientosInventario: 'Movimientos de inventario',
+    ventas: 'Ventas',
+    sesionesCaja: 'Cierres de caja',
+    clientes: 'Clientes',
+    proveedores: 'Proveedores',
+    compras: 'Compras',
+    gastos: 'Gastos',
     tasas: 'Tasas',
     usuarios: 'Usuarios',
     auditoria: 'Registro de auditoría',
@@ -80,6 +87,8 @@
 </script>
 
 <div class="pila">
+  <RespaldoAutomatico />
+
   <form class="tarjeta pila" onsubmit={exportar}>
     <div class="fila"><Icono nombre="bajar" /><h2>Crear respaldo</h2></div>
     <p>

@@ -4,7 +4,8 @@ import { guardarDispositivo, guardarNegocio, leerDispositivo, leerNegocio, NEGOC
 import { db } from '../db/db';
 import { ErrorNegocio, ErrorPermiso } from '../errores';
 import { guardarTasaAutomatica } from '../tasa/servicio';
-import { crearRespaldo, leerRespaldo, restaurarRespaldo, resumirRespaldo } from './respaldo';
+import { configurarRespaldoAuto, ejecutarRespaldoAutomatico, leerRespaldoAuto, type Carpeta } from './automatico';
+import { crearRespaldo, exportarContenido, leerRespaldo, restaurarRespaldo, resumirRespaldo } from './respaldo';
 
 describe('respaldo', () => {
   beforeEach(async () => {
@@ -34,6 +35,40 @@ describe('respaldo', () => {
     await expect(leerRespaldo(new Blob(['hola mundo, no soy un respaldo']), 'contrasena-larga')).rejects.toThrow(
       'no es un respaldo',
     );
+  });
+
+  it('la contraseña del respaldo automático no viaja en el respaldo', async () => {
+    await configurarRespaldoAuto({ activo: true, contrasena: 'clave-secreta-123' });
+    const contenido = await exportarContenido();
+    expect(JSON.stringify(contenido)).not.toContain('clave-secreta-123');
+  });
+
+  it('respaldo automático: desactivado, a descarga sin carpeta o guardado en la carpeta', async () => {
+    expect(await ejecutarRespaldoAutomatico()).toEqual({ estado: 'desactivado' });
+    await configurarRespaldoAuto({ activo: true, contrasena: 'clave-secreta-123' });
+    const sinCarpeta = await ejecutarRespaldoAutomatico();
+    expect(sinCarpeta.estado).toBe('descargar');
+
+    const escritos: { nombre: string; tamano: number }[] = [];
+    const carpeta: Carpeta = {
+      name: 'PENDRIVE',
+      queryPermission: async () => 'granted',
+      getFileHandle: async (nombre) => ({
+        createWritable: async () => ({
+          write: async (datos: Blob) => {
+            escritos.push({ nombre, tamano: datos.size });
+          },
+          close: async () => {},
+        }),
+      }),
+    };
+    const r = await ejecutarRespaldoAutomatico({ carpeta });
+    expect(r).toMatchObject({ estado: 'guardado', carpeta: 'PENDRIVE' });
+    expect(escritos).toHaveLength(1);
+    expect(escritos[0]!.nombre).toMatch(/^respaldo-bodega-\d{4}-\d{2}-\d{2}-\d{4}\.bodega$/);
+    expect((await leerRespaldoAuto()).ultimo).not.toBeNull();
+    // El archivo guardado se puede abrir con la contraseña.
+    await expect(leerRespaldo((sinCarpeta as { archivo: Blob }).archivo, 'clave-secreta-123')).resolves.toBeTruthy();
   });
 
   it('restaura todo y conserva la identidad del equipo', async () => {

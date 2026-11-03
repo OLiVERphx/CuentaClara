@@ -280,6 +280,20 @@ export async function listarCompras(opciones: { soloPendientes?: boolean; provee
   return compras;
 }
 
+/** Proveedor de la compra más reciente de cada producto (para agrupar la lista de reposición). */
+export async function ultimoProveedorPorProducto(productoIds: string[]): Promise<Map<string, string>> {
+  const items = await db.compraItems.where('productoId').anyOf(productoIds).toArray();
+  const compras = new Map((await db.compras.bulkGet([...new Set(items.map((i) => i.compraId))])).filter((c) => !!c).map((c) => [c!.id, c!]));
+  const resultado = new Map<string, { proveedorId: string; fecha: string }>();
+  for (const i of items) {
+    const c = compras.get(i.compraId);
+    if (!c) continue;
+    const actual = resultado.get(i.productoId);
+    if (!actual || c.creadoEn > actual.fecha) resultado.set(i.productoId, { proveedorId: c.proveedorId, fecha: c.creadoEn });
+  }
+  return new Map([...resultado].map(([producto, v]) => [producto, v.proveedorId]));
+}
+
 /** Texto corto para mostrar una cantidad de una línea de compra. */
 export function cantidadDeLinea(item: Pick<CompraItem, 'cantidad' | 'unidad'>): string {
   return formatearCantidad(item.cantidad, item.unidad);

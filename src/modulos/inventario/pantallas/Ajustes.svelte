@@ -10,6 +10,7 @@
   import { inventario } from '../almacen.svelte';
   import { listarMovimientosRecientes, registrarAjuste, registrarConteo, type TipoAjuste } from '../servicio';
   import { TIPOS_MOVIMIENTO, type MovimientoInventario, type Producto } from '../tipos';
+  import { contarPorReponer } from '../reposicion';
   import SelectorProducto from './SelectorProducto.svelte';
 
   let { consulta }: PropsPantalla = $props();
@@ -81,6 +82,11 @@
     }
   }
 
+  const porReponer = $derived.by(() => {
+    void inventario.version;
+    return contarPorReponer(inventario.indice.todos());
+  });
+
   function nombreProducto(id: string): string {
     return inventario.indice.obtener(id)?.producto.nombre ?? '—';
   }
@@ -88,9 +94,14 @@
 
 <div class="encabezado-pagina">
   <h1>Ajustes de inventario</h1>
-  {#if puede('productos.editar')}
-    <a class="btn" href="#/inventario/importar"><Icono nombre="subir" /> Importar productos</a>
-  {/if}
+  <div class="fila">
+    <a class="btn" href="#/inventario/reponer">
+      <Icono nombre="alerta" /> Por reponer{#if porReponer > 0} <span class="chip chip-bajo num">{porReponer}</span>{/if}
+    </a>
+    {#if puede('productos.editar')}
+      <a class="btn" href="#/inventario/importar"><Icono nombre="subir" /> Importar productos</a>
+    {/if}
+  </div>
 </div>
 
 <div class="dos-columnas">

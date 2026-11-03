@@ -1,7 +1,7 @@
 <script lang="ts">
   import { puede, redondeoBs, tasaDelDia } from '../../../app/estado.svelte';
   import { navegar } from '../../../app/router.svelte';
-  import { formatearBs, formatearCantidad, formatearUsd } from '../../../core/dinero/dinero';
+  import { formatearBs, formatearCantidad, formatearPorcentaje, formatearUsd, margenSobreVenta } from '../../../core/dinero/dinero';
   import Icono from '../../../ui/Icono.svelte';
   import { inventario } from '../almacen.svelte';
   import { enUsd, estadoStock, precioEnBs } from '../precios';
@@ -15,6 +15,7 @@
   let limite = $state(200);
 
   const tasa = $derived(tasaDelDia());
+  const verCostos = puede('productos.ver_costos');
   const redondeo = $derived(redondeoBs());
 
   const lista = $derived.by(() => {
@@ -46,6 +47,7 @@
   <h1>Productos</h1>
   {#if puede('productos.editar')}
     <div class="fila">
+      <a class="btn" href="#/productos/precios"><Icono nombre="dolar" /> Ajustar precios</a>
       <a class="btn" href="#/inventario/importar"><Icono nombre="subir" /> Importar CSV</a>
       <a class="btn btn-primario" href="#/productos/nuevo"><Icono nombre="mas" /> Nuevo producto</a>
     </div>
@@ -82,6 +84,7 @@
           <th class="ocultable">Categoría</th>
           <th class="derecha">Precio Bs</th>
           <th class="derecha">Precio $</th>
+          {#if verCostos}<th class="derecha ocultable">Margen</th>{/if}
           <th class="derecha">Stock</th>
         </tr>
       </thead>
@@ -97,6 +100,10 @@
             <td class="ocultable suave">{inventario.indice.nombreCategoria(p.categoriaId)}</td>
             <td class="derecha num">{tasa !== null || p.monedaPrecio === 'VES' ? formatearBs(precioEnBs(p.precio, p.monedaPrecio, tasa ?? 0, redondeo)) : '—'}</td>
             <td class="derecha num">{tasa !== null || p.monedaPrecio === 'USD' ? formatearUsd(enUsd(p.precio, p.monedaPrecio, tasa ?? 1)) : '—'}</td>
+            {#if verCostos}
+              {@const margen = p.costoPromedio > 0 && tasa !== null ? margenSobreVenta(enUsd(p.precio, p.monedaPrecio, tasa), p.costoPromedio) : null}
+              <td class="derecha num ocultable" class:margen-bajo={margen !== null && margen < 1000}>{margen !== null ? formatearPorcentaje(margen) : '—'}</td>
+            {/if}
             <td class="derecha">
               <span class="chip chip-{estado} num" title={ETIQUETA[estado]}>{formatearCantidad(p.stock, p.unidad)}</span>
             </td>
@@ -132,6 +139,11 @@
 
   .inactivo td {
     opacity: 0.6;
+  }
+
+  /* Margen menor a 10 %: conviene revisar el precio. */
+  .margen-bajo {
+    color: var(--peligro);
   }
 
   @media (max-width: 760px) {

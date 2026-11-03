@@ -58,11 +58,21 @@ export async function exportarContenido(): Promise<ContenidoRespaldo> {
   await db.transaction('r', db.tables, async () => {
     for (const tabla of db.tables) datos[tabla.name] = await tabla.toArray();
   });
+  // Lo propio de este equipo (y la contraseña de los respaldos automáticos) nunca sale en un respaldo.
+  datos.config = (datos.config as EntradaConfig[]).filter((e) => !CLAVES_LOCALES.has(e.clave));
   return { formato: 'bodega-respaldo', version: 1, esquema: db.verno, creadoEn: ahoraIso(), dispositivoId: dispositivoId(), datos };
 }
 
 export async function crearRespaldo(contrasena: string): Promise<Blob> {
   exigirPermiso('respaldo.gestionar');
+  return cifrarRespaldo(contrasena);
+}
+
+/**
+ * Arma y cifra el archivo de respaldo, sin verificar permisos. Solo para el
+ * respaldo automático, que el dueño configura y corre al cerrar la caja.
+ */
+export async function cifrarRespaldo(contrasena: string): Promise<Blob> {
   if (contrasena.length < LARGO_MINIMO_CONTRASENA) {
     throw new ErrorNegocio(`La contraseña del respaldo debe tener al menos ${LARGO_MINIMO_CONTRASENA} caracteres.`);
   }

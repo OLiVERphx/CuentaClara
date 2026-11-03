@@ -1,6 +1,7 @@
 import {
   bsAUsd,
   multiplicarCantidad,
+  proporcional,
   redondearAPaso,
   usdABs,
   type Centavos,
@@ -42,6 +43,31 @@ export function enUsd(monto: number, moneda: MonedaPrecio, tasa: Tasa4): Centavo
 /** Precio de una presentación en la moneda del producto. */
 export function precioPresentacion(producto: Pick<Producto, 'precio'>, presentacion: Pick<Presentacion, 'precio' | 'factor'>): number {
   return presentacion.precio ?? multiplicarCantidad(producto.precio, presentacion.factor);
+}
+
+/** Regla del ajuste masivo: subir/bajar un porcentaje, o fijar un margen sobre el costo. */
+export type ReglaPrecio = { tipo: 'porcentaje'; centesimas: number } | { tipo: 'margen'; centesimas: number };
+
+/**
+ * Nuevo precio según la regla, redondeado hacia arriba al múltiplo `paso`
+ * (por ejemplo, 5 = a $0,05). Devuelve `null` si la regla no aplica: el margen
+ * necesita costo y precio en USD, y un margen de 100 % o más no tiene sentido.
+ */
+export function nuevoPrecio(
+  producto: Pick<Producto, 'precio' | 'costoPromedio' | 'monedaPrecio'>,
+  regla: ReglaPrecio,
+  paso: number,
+): number | null {
+  let crudo: number;
+  if (regla.tipo === 'porcentaje') {
+    if (regla.centesimas <= -10_000) return null;
+    crudo = proporcional(producto.precio, 10_000 + regla.centesimas, 10_000);
+  } else {
+    if (producto.monedaPrecio !== 'USD' || producto.costoPromedio <= 0 || regla.centesimas <= 0 || regla.centesimas >= 10_000) return null;
+    // precio = costo ÷ (1 − margen); el costo está en diezmilésimas y el precio en centavos.
+    crudo = proporcional(producto.costoPromedio, 10_000, (10_000 - regla.centesimas) * 100);
+  }
+  return redondearAPaso(crudo, Math.max(paso, 1), 'arriba');
 }
 
 export type EstadoStock = 'agotado' | 'bajo' | 'normal';

@@ -55,7 +55,12 @@
   <nav class="menu" aria-label="Menú principal">
     {#each menu as entrada (entrada.ruta)}
       <a href="#{entrada.ruta}" class:activo={activo(entrada.ruta)} aria-current={activo(entrada.ruta) ? 'page' : undefined}>
-        <Icono nombre={entrada.icono} tamano={22} />
+        <span class="icono-menu">
+          <Icono nombre={entrada.icono} tamano={22} />
+          {#if entrada.insignia && entrada.insignia() > 0}
+            <span class="insignia num" aria-label="{entrada.insignia()} por atender">{entrada.insignia()}</span>
+          {/if}
+        </span>
         <span>{entrada.titulo}</span>
       </a>
     {/each}
@@ -115,6 +120,27 @@
     background: var(--superficie-2);
   }
 
+  .icono-menu {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .insignia {
+    position: absolute;
+    top: -7px;
+    right: -10px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--aviso);
+    color: var(--superficie);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+  }
+
   .menu a.activo {
     background: var(--primario-suave);
     color: var(--primario);
@@ -154,6 +180,10 @@
       padding: 0.35rem 0.25rem calc(0.35rem + env(safe-area-inset-bottom));
       border-right: 0;
       border-top: 1px solid var(--borde);
+    }
+
+    .menu::-webkit-scrollbar {
+      display: none;
     }
 
     .menu a {

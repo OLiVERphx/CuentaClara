@@ -27,6 +27,8 @@ export interface EntradaMenu {
   /** Posición en el menú: los módulos se intercalan por este número. */
   orden: number;
   permiso?: Permiso;
+  /** Número a destacar junto a la entrada (por ejemplo, productos por reponer). Se lee de estado reactivo. */
+  insignia?: () => number;
 }
 
 /**

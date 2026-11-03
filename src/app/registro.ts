@@ -1,6 +1,7 @@
 import { manifiestoCaja } from '../modulos/caja/manifiesto';
 import { manifiestoClientes } from '../modulos/clientes/manifiesto';
 import { manifiestoCompras } from '../modulos/compras/manifiesto';
+import { manifiestoReportes } from '../modulos/reportes/manifiesto';
 import { manifiestoInventario } from '../modulos/inventario/manifiesto';
 import { manifiestoVentas } from '../modulos/ventas/manifiesto';
 import type { EntradaMenu, ManifiestoModulo, Ruta } from './modulos';
@@ -17,6 +18,7 @@ export const MODULOS: ManifiestoModulo[] = [
   manifiestoClientes,
   manifiestoCompras,
   manifiestoVentas,
+  manifiestoReportes,
 ];
 
 export const RUTAS: Ruta[] = MODULOS.flatMap((m) => m.rutas);

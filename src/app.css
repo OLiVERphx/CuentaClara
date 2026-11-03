@@ -18,6 +18,10 @@
   --exito: #157f3d;
   --exito-suave: #e6f5ec;
   --foco: #2563eb;
+  /* Gráficos: color validado (luminosidad, croma y contraste ≥ 3:1) sobre la superficie de cada modo. */
+  --grafico-serie: #0d9488;
+  --grafico-rejilla: #e8ebef;
+  --grafico-eje: #c9cfd6;
   --sombra: 0 1px 2px rgb(16 24 40 / 0.06), 0 2px 8px rgb(16 24 40 / 0.05);
   --radio: 10px;
   --radio-chico: 6px;
@@ -45,6 +49,9 @@
     --exito: #4cc97a;
     --exito-suave: #13301f;
     --foco: #7aa7ff;
+    --grafico-serie: #14a394;
+    --grafico-rejilla: #232b34;
+    --grafico-eje: #36404b;
     --sombra: 0 1px 2px rgb(0 0 0 / 0.4);
   }
 }

@@ -18,6 +18,7 @@ export const PERMISOS = {
   'clientes.gestionar': 'Crear y editar clientes, y ajustar sus cuentas',
   'clientes.exceder_limite': 'Fiar por encima del límite de crédito',
   'compras.gestionar': 'Registrar compras, pagos a proveedores y proveedores',
+  'reportes.ver': 'Ver reportes de ventas y ganancias',
 } as const;
 
 export type Permiso = keyof typeof PERMISOS;
