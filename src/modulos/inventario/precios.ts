@@ -1,8 +1,37 @@
-import { bsAUsd, multiplicarCantidad, usdABs, type Centavos, type Centimos, type Tasa4 } from '../../core/dinero/dinero';
+import {
+  bsAUsd,
+  multiplicarCantidad,
+  redondearAPaso,
+  usdABs,
+  type Centavos,
+  type Centimos,
+  type Milesimas,
+  type Redondeo,
+  type Tasa4,
+} from '../../core/dinero/dinero';
 import type { MonedaPrecio, Presentacion, Producto } from './tipos';
 
+/** Conversión exacta a Bs, sin redondear (para reportes y cálculos internos). */
 export function enBs(monto: number, moneda: MonedaPrecio, tasa: Tasa4): Centimos {
   return moneda === 'USD' ? usdABs(monto, tasa) : monto;
+}
+
+/**
+ * Precio en Bs tal como se muestra y se cobra (D6): la conversión desde USD se
+ * redondea al paso del negocio, así el cliente que lleva una sola unidad paga
+ * exactamente lo que ve. Los precios fijos en Bs no se tocan.
+ */
+export function precioEnBs(monto: number, moneda: MonedaPrecio, tasa: Tasa4, redondeo: Redondeo): Centimos {
+  return moneda === 'USD' ? redondearAPaso(usdABs(monto, tasa), redondeo.paso, redondeo.modo) : monto;
+}
+
+/**
+ * Subtotal en Bs de una cantidad, a partir del precio ya redondeado. Para
+ * productos por unidad es una multiplicación exacta; para los vendidos por
+ * peso el resultado se redondea de nuevo (0,350 kg × Bs 7.117 = Bs 2.491).
+ */
+export function subtotalEnBs(precioBs: Centimos, cantidad: Milesimas, redondeo: Redondeo): Centimos {
+  return redondearAPaso(multiplicarCantidad(precioBs, cantidad), redondeo.paso, redondeo.modo);
 }
 
 /** Equivalente en USD; para productos con precio fijo en Bs es solo informativo (D5). */

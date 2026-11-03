@@ -12,7 +12,7 @@ export interface ConfigNegocio {
   rif: string;
   direccion: string;
   telefono: string;
-  /** Paso de redondeo del total en Bs (D6). 100 = al bolívar entero. */
+  /** Paso al que se redondea el precio en Bs de cada producto (D6). 100 = al bolívar entero. */
   pasoRedondeoBs: Centimos;
   modoRedondeo: ModoRedondeo;
   /** Ajuste opcional sobre la tasa BCV (D9). */

@@ -53,7 +53,7 @@
     <h2>Precios en bolívares</h2>
     <div class="rejilla">
       <label class="campo">
-        <span>Redondeo del total</span>
+        <span>Redondeo de precios en Bs</span>
         <select bind:value={cfg.pasoRedondeoBs}>
           {#each PASOS_REDONDEO as p}
             <option value={p.valor}>{p.nombre}</option>
@@ -74,8 +74,9 @@
       </label>
     </div>
     <p class="ayuda">
-      El redondeo se aplica solo al total de cada venta (los precios por producto se muestran exactos). El ajuste sobre la tasa es opcional;
-      con 0 % se usa la tasa oficial tal cual.
+      El precio en Bs de cada producto se redondea a este paso, y el total de una venta es la suma de esos precios: el cliente paga
+      exactamente lo que ve. Los precios fijos en Bs no se redondean. El ajuste sobre la tasa es opcional; con 0 % se usa la tasa oficial
+      tal cual.
     </p>
   </div>
 

@@ -6,7 +6,7 @@ import { ErrorNegocio, ErrorPermiso } from '../../core/errores';
 import { reiniciarBase, sesionDePrueba } from '../../test/util';
 import { IndiceProductos } from './busqueda';
 import { decodificar, detectarSeparador, generarPlantilla, parsearCsv, validarCsv } from './csv';
-import { enBs, estadoStock, precioPresentacion } from './precios';
+import { enBs, estadoStock, precioEnBs, precioPresentacion, subtotalEnBs } from './precios';
 import {
   actualizarProducto,
   crearCategoria,
@@ -37,6 +37,25 @@ describe('precios', () => {
   it('convierte según la moneda del producto', () => {
     expect(enBs(125, 'USD', 8_895_754)).toBe(111_197);
     expect(enBs(150_000, 'VES', 8_895_754)).toBe(150_000);
+  });
+
+  it('redondea el precio en Bs al paso del negocio y no toca los precios fijos en Bs', () => {
+    const alBolivar = { paso: 100, modo: 'cercano' as const };
+    expect(precioEnBs(125, 'USD', 8_895_754, alBolivar)).toBe(111_200); // 1.111,97 → 1.112
+    expect(precioEnBs(150_050, 'VES', 8_895_754, alBolivar)).toBe(150_050);
+    expect(precioEnBs(125, 'USD', 8_895_754, { paso: 1000, modo: 'arriba' })).toBe(112_000);
+    expect(precioEnBs(125, 'USD', 8_895_754, { paso: 1, modo: 'cercano' })).toBe(111_197);
+  });
+
+  it('el subtotal parte del precio redondeado: el cliente paga lo que ve', () => {
+    const alBolivar = { paso: 100, modo: 'cercano' as const };
+    const harina = precioEnBs(125, 'USD', 8_895_754, alBolivar);
+    expect(subtotalEnBs(harina, 1000, alBolivar)).toBe(harina);
+    expect(subtotalEnBs(harina, 3000, alBolivar)).toBe(333_600); // 3 × 1.112
+    // Queso a $8/kg → Bs 7.117/kg; 0,350 kg → 2.490,95 → Bs 2.491
+    const queso = precioEnBs(800, 'USD', 8_895_754, alBolivar);
+    expect(queso).toBe(711_700);
+    expect(subtotalEnBs(queso, 350, alBolivar)).toBe(249_100);
   });
 
   it('calcula el precio de una presentación', () => {

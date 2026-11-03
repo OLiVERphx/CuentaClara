@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { puede, tasaDelDia } from '../../../app/estado.svelte';
+  import { puede, redondeoBs, tasaDelDia } from '../../../app/estado.svelte';
   import { navegar } from '../../../app/router.svelte';
   import { formatearBs, formatearCantidad, formatearUsd } from '../../../core/dinero/dinero';
   import Icono from '../../../ui/Icono.svelte';
   import { inventario } from '../almacen.svelte';
-  import { enBs, enUsd, estadoStock } from '../precios';
+  import { enUsd, estadoStock, precioEnBs } from '../precios';
   import type { Producto } from '../tipos';
 
   type Filtro = 'activos' | 'bajo' | 'agotado' | 'inactivos' | 'todos';
@@ -15,6 +15,7 @@
   let limite = $state(200);
 
   const tasa = $derived(tasaDelDia());
+  const redondeo = $derived(redondeoBs());
 
   const lista = $derived.by(() => {
     void inventario.version;
@@ -94,7 +95,7 @@
               {#if !p.activo}<span class="chip">Inactivo</span>{/if}
             </td>
             <td class="ocultable suave">{inventario.indice.nombreCategoria(p.categoriaId)}</td>
-            <td class="derecha num">{tasa !== null || p.monedaPrecio === 'VES' ? formatearBs(enBs(p.precio, p.monedaPrecio, tasa ?? 0)) : '—'}</td>
+            <td class="derecha num">{tasa !== null || p.monedaPrecio === 'VES' ? formatearBs(precioEnBs(p.precio, p.monedaPrecio, tasa ?? 0, redondeo)) : '—'}</td>
             <td class="derecha num">{tasa !== null || p.monedaPrecio === 'USD' ? formatearUsd(enUsd(p.precio, p.monedaPrecio, tasa ?? 1)) : '—'}</td>
             <td class="derecha">
               <span class="chip chip-{estado} num" title={ETIQUETA[estado]}>{formatearCantidad(p.stock, p.unidad)}</span>

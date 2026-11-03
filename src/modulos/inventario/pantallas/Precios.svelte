@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { puede, tasaDelDia } from '../../../app/estado.svelte';
+  import { puede, redondeoBs, tasaDelDia } from '../../../app/estado.svelte';
   import Icono from '../../../ui/Icono.svelte';
   import { inventario } from '../almacen.svelte';
   import TarjetaPrecio from './TarjetaPrecio.svelte';
@@ -13,6 +13,7 @@
     return inventario.indice.buscar(consulta, { limite: 30 });
   });
   const tasa = $derived(tasaDelDia());
+  const redondeo = $derived(redondeoBs());
 
   $effect(() => {
     void tick().then(() => buscador?.focus());
@@ -64,7 +65,7 @@
   {:else}
     <div class="resultados">
       {#each resultados as r (r.producto.id)}
-        <TarjetaPrecio resultado={r} {tasa} categoria={inventario.indice.nombreCategoria(r.producto.categoriaId)} />
+        <TarjetaPrecio resultado={r} {tasa} {redondeo} categoria={inventario.indice.nombreCategoria(r.producto.categoriaId)} />
       {/each}
     </div>
   {/if}

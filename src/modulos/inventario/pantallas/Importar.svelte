@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tasaDelDia } from '../../../app/estado.svelte';
+  import { redondeoBs, tasaDelDia } from '../../../app/estado.svelte';
   import { navegar } from '../../../app/router.svelte';
   import { formatearBs, formatearCantidad, formatearCosto, formatearUsd } from '../../../core/dinero/dinero';
   import { avisar, avisarError } from '../../../ui/notificaciones.svelte';
@@ -7,7 +7,7 @@
   import Icono from '../../../ui/Icono.svelte';
   import { inventario } from '../almacen.svelte';
   import { decodificar, generarPlantilla, validarCsv, type ResultadoValidacion } from '../csv';
-  import { enBs } from '../precios';
+  import { precioEnBs } from '../precios';
   import { importarProductos } from '../servicio';
 
   let resultado = $state<ResultadoValidacion | null>(null);
@@ -124,7 +124,7 @@
                     <td class="suave">{v.categoriaNombre}</td>
                     <td class="derecha num">
                       {d.monedaPrecio === 'USD' ? formatearUsd(d.precio) : formatearBs(d.precio)}
-                      {#if d.monedaPrecio === 'USD' && tasa !== null}<span class="ayuda"> · {formatearBs(enBs(d.precio, 'USD', tasa))}</span>{/if}
+                      {#if d.monedaPrecio === 'USD' && tasa !== null}<span class="ayuda"> · {formatearBs(precioEnBs(d.precio, 'USD', tasa, redondeoBs()))}</span>{/if}
                     </td>
                     <td class="derecha num">{d.costoPromedio ? formatearCosto(d.costoPromedio) : '—'}</td>
                     <td class="derecha num">{formatearCantidad(v.stock, d.unidad)}</td>

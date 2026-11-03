@@ -1,5 +1,5 @@
 import { cerrarSesion, iniciarSesion, rolTienePermiso, type Permiso, type Rol } from '../core/auth/permisos';
-import type { Tasa4 } from '../core/dinero/dinero';
+import type { Redondeo, Tasa4 } from '../core/dinero/dinero';
 import type { ConfigDispositivo, ConfigNegocio, Tasa } from '../core/db/tipos';
 import { mensajeDeError } from '../core/errores';
 import { tasaAplicada, tasaEstaVieja } from '../core/tasa/logica';
@@ -31,6 +31,11 @@ export function puede(permiso: Permiso): boolean {
 export function tasaDelDia(): Tasa4 | null {
   if (!app.tasa || !app.negocio) return null;
   return tasaAplicada(app.tasa, app.negocio.ajusteTasa);
+}
+
+/** Redondeo de precios en Bs configurado por el negocio (D6). */
+export function redondeoBs(): Redondeo {
+  return { paso: app.negocio?.pasoRedondeoBs ?? 100, modo: app.negocio?.modoRedondeo ?? 'cercano' };
 }
 
 export function tasaVieja(): boolean {

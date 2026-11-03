@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { puede, tasaDelDia } from '../../../app/estado.svelte';
+  import { puede, redondeoBs, tasaDelDia } from '../../../app/estado.svelte';
   import type { PropsPantalla } from '../../../app/modulos';
   import { navegar } from '../../../app/router.svelte';
   import {
@@ -20,7 +20,7 @@
   import { avisar, avisarError } from '../../../ui/notificaciones.svelte';
   import Icono from '../../../ui/Icono.svelte';
   import { inventario } from '../almacen.svelte';
-  import { enBs, enUsd } from '../precios';
+  import { enUsd, precioEnBs } from '../precios';
   import { actualizarProducto, crearCategoria, crearProducto, listarMovimientos, type DatosPresentacion } from '../servicio';
   import { TIPOS_MOVIMIENTO, type MonedaPrecio, type MovimientoInventario, type Producto, type Unidad } from '../tipos';
 
@@ -263,7 +263,7 @@
         {#if precio !== null}
           <div class="vista-previa">
             {#if tasa !== null}
-              <span>Hoy: <strong class="num">{formatearBs(enBs(precio, f.moneda, tasa))}</strong> · <span class="num">{f.moneda === 'VES' ? '≈ ' : ''}{formatearUsd(enUsd(precio, f.moneda, tasa))}</span></span>
+              <span>Hoy: <strong class="num">{formatearBs(precioEnBs(precio, f.moneda, tasa, redondeoBs()))}</strong> · <span class="num">{f.moneda === 'VES' ? '≈ ' : ''}{formatearUsd(enUsd(precio, f.moneda, tasa))}</span></span>
             {:else}
               <span class="suave">Sin tasa vigente: no se puede mostrar la conversión.</span>
             {/if}

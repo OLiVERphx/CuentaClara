@@ -139,6 +139,8 @@ describe('formato venezolano', () => {
   it('formatea monedas, tasa y costo', () => {
     expect(formatearUsd(125)).toBe('$ 1,25');
     expect(formatearBs(111_197)).toBe('Bs 1.111,97');
+    expect(formatearBs(111_200)).toBe('Bs 1.112');
+    expect(formatearBs(111_150)).toBe('Bs 1.111,50');
     expect(formatearTasa(8_895_754)).toBe('889,5754');
     expect(formatearCosto(12_500)).toBe('$ 1,25');
     expect(formatearCosto(4167)).toBe('$ 0,4167');

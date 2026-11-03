@@ -30,7 +30,7 @@ Reemplazar el control en papel de una bodega venezolana con un sistema que:
 | D3 | Dispositivos | Laptop ahora; laptop y teléfono a la vez en el futuro. El modelo de datos está listo para sincronizar desde el inicio |
 | D4 | Moneda base | USD. El precio en Bs se calcula como `USD × tasa` |
 | D5 | Precios en Bs fijo | Se permiten como excepción por producto |
-| D6 | Redondeo en Bs | Cada línea se calcula exacta y solo se redondea el **total** (por defecto al bolívar entero más cercano; configurable a 0,50, 1, 5 o 10) |
+| D6 | Redondeo en Bs | Se redondea el **precio en Bs de cada producto** (por defecto al bolívar entero más cercano; configurable a 0,50, 1, 5 o 10) y todo se calcula desde ese precio: el cliente paga exactamente lo que ve, aunque lleve un solo producto. *(Cambiado el 2026-11-02; antes solo se redondeaba el total.)* |
 | D7 | Costo | Costo promedio ponderado |
 | D8 | Tasa | La tasa BCV se aplica automáticamente según su fecha valor. Fines de semana y feriados usan la última vigente. Siempre se puede cargar a mano |
 | D9 | Ajuste sobre la tasa | Opcional, 0 % por defecto |
@@ -167,7 +167,7 @@ Correlativo por dispositivo con prefijo: `L-000123` (laptop), `T-000045` (teléf
 - **MovimientoInventario** (kardex): producto, tipo (`entrada_compra` | `venta` | `devolucion` | `anulacion` | `merma` | `consumo_propio` | `ajuste_positivo` | `ajuste_negativo` | `inventario_inicial`), cantidad, costo unitario, stock resultante, documento de origen, motivo, usuario.
 
 ### Ventas
-- **Venta**: número, fecha, usuario, sesión de caja, cliente (opcional), tasa usada (valor copiado), total USD, total Bs exacto, total Bs redondeado, estado (`completada` | `anulada`), motivo de anulación.
+- **Venta**: número, fecha, usuario, sesión de caja, cliente (opcional), tasa usada (valor copiado), total USD, total Bs exacto (para reportes), total Bs cobrado (suma de líneas redondeadas), estado (`completada` | `anulada`), motivo de anulación.
 - **VentaItem**: venta, producto, presentación, descripción copiada, cantidad, precio unitario copiado (y su moneda), costo unitario copiado, subtotales en USD y Bs.
 - **Pago**: venta, método, moneda, monto, equivalente en Bs a la tasa de la venta, referencia, banco, es vuelto (sí/no).
 - **Devolucion** y **DevolucionItem**: venta de origen, productos, cantidades, forma de reintegro (`efectivo_bs` | `efectivo_usd` | `pago_movil` | `saldo_a_favor`).
@@ -196,9 +196,11 @@ Correlativo por dispositivo con prefijo: `L-000123` (laptop), `T-000045` (teléf
 ### 6.1 Precio en Bs
 ```
 tasa_aplicada = tasa_bcv_vigente × (1 + ajuste%)
-precio_bs     = precio_usd × tasa_aplicada          (exacto, en céntimos)
-total_bs      = redondear(Σ líneas_bs, paso_de_redondeo)
+precio_bs     = redondear(precio_usd × tasa_aplicada, paso)   (lo que se muestra y se cobra)
+línea_bs      = redondear(precio_bs × cantidad, paso)         (por unidad ya es exacto; importa en kg)
+total_bs      = Σ líneas_bs
 ```
+La conversión exacta (sin redondear) se conserva para reportes. El redondeo afecta como mucho medio paso por línea.
 Los productos con precio fijo en Bs no se convierten; su equivalente en USD es solo informativo.
 
 ### 6.2 Tasa vigente

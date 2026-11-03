@@ -22,6 +22,11 @@ export type Centesimas = number;
 
 export type ModoRedondeo = 'cercano' | 'arriba' | 'abajo';
 
+export interface Redondeo {
+  paso: Centimos;
+  modo: ModoRedondeo;
+}
+
 export const ESCALA = {
   centavos: 2,
   diezmilesimas: 4,
@@ -150,8 +155,9 @@ export function formatearUsd(monto: Centavos): string {
   return '$ ' + formatearDecimal(monto, ESCALA.centavos);
 }
 
+/** `Bs 1.112` si el monto es entero; `Bs 1.111,50` si tiene céntimos. */
 export function formatearBs(monto: Centimos): string {
-  return 'Bs ' + formatearDecimal(monto, ESCALA.centimos);
+  return 'Bs ' + formatearDecimal(monto, ESCALA.centimos, monto % 100 === 0 ? 0 : ESCALA.centimos);
 }
 
 export function formatearTasa(tasa: Tasa4): string {

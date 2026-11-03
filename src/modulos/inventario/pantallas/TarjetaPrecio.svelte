@@ -1,9 +1,23 @@
 <script lang="ts">
-  import { ESCALA, formatearBs, formatearCantidad, formatearUsd, multiplicarCantidad, parsearDecimal, type Tasa4 } from '../../../core/dinero/dinero';
+  import {
+    ESCALA,
+    formatearBs,
+    formatearCantidad,
+    formatearUsd,
+    multiplicarCantidad,
+    parsearDecimal,
+    type Redondeo,
+    type Tasa4,
+  } from '../../../core/dinero/dinero';
   import type { ResultadoBusqueda } from '../busqueda';
-  import { enBs, enUsd, estadoStock, precioPresentacion } from '../precios';
+  import { enUsd, estadoStock, precioEnBs, precioPresentacion, subtotalEnBs } from '../precios';
 
-  let { resultado, tasa, categoria }: { resultado: ResultadoBusqueda; tasa: Tasa4 | null; categoria: string } = $props();
+  let {
+    resultado,
+    tasa,
+    redondeo,
+    categoria,
+  }: { resultado: ResultadoBusqueda; tasa: Tasa4 | null; redondeo: Redondeo; categoria: string } = $props();
 
   const p = $derived(resultado.producto);
   const estado = $derived(estadoStock(p));
@@ -33,7 +47,7 @@
     </div>
   {:else}
     <div class="precio">
-      <strong class="num principal">{formatearBs(enBs(p.precio, p.monedaPrecio, tasa ?? 0))}</strong>
+      <strong class="num principal">{formatearBs(precioEnBs(p.precio, p.monedaPrecio, tasa ?? 0, redondeo))}</strong>
       {#if tasa !== null}
         <span class="num secundario">{p.monedaPrecio === 'VES' ? '≈ ' : ''}{formatearUsd(enUsd(p.precio, p.monedaPrecio, tasa))}</span>
       {/if}
@@ -48,7 +62,7 @@
         <li class:exacta={resultado.presentacionExacta?.id === pres.id}>
           <span>{pres.nombre} <span class="ayuda">({formatearCantidad(pres.factor, p.unidad)})</span></span>
           <span class="num">
-            {#if tasa !== null}<strong>{formatearBs(enBs(monto, p.monedaPrecio, tasa))}</strong> · {/if}{formatearUsd(tasa !== null ? enUsd(monto, p.monedaPrecio, tasa) : monto)}
+            {#if tasa !== null}<strong>{formatearBs(precioEnBs(monto, p.monedaPrecio, tasa, redondeo))}</strong> · {/if}{formatearUsd(tasa !== null ? enUsd(monto, p.monedaPrecio, tasa) : monto)}
           </span>
         </li>
       {/each}
@@ -64,7 +78,7 @@
       {#if peso}
         {@const monto = multiplicarCantidad(p.precio, peso)}
         <div class="num resultado-peso">
-          {formatearCantidad(peso, 'kg')} = <strong>{formatearBs(enBs(monto, p.monedaPrecio, tasa))}</strong> · {formatearUsd(enUsd(monto, p.monedaPrecio, tasa))}
+          {formatearCantidad(peso, 'kg')} = <strong>{formatearBs(subtotalEnBs(precioEnBs(p.precio, p.monedaPrecio, tasa, redondeo), peso, redondeo))}</strong> · {formatearUsd(enUsd(monto, p.monedaPrecio, tasa))}
         </div>
       {/if}
     </div>
