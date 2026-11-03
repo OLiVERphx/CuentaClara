@@ -3,27 +3,28 @@
   import Icono from '../ui/Icono.svelte';
   import BarraSuperior from './BarraSuperior.svelte';
   import { puede } from './estado.svelte';
-  import type { PropsPantalla } from './modulos';
+  import type { PropsPantalla, Ruta } from './modulos';
   import { MENU, RUTAS } from './registro';
   import { navegacion, navegar, resolver } from './router.svelte';
 
   const actual = $derived(resolver(RUTAS, navegacion.ruta));
   const menu = $derived(MENU.filter((m) => !m.permiso || puede(m.permiso)));
 
-  let Pantalla = $state<Component<PropsPantalla> | null>(null);
-  // Las pantallas sin props ignoran las que reciben.
+  // Se guarda junto con la ruta a la que pertenece: así, al navegar, la
+  // pantalla anterior nunca se dibuja (ni un instante) con los parámetros de la nueva.
+  let cargada = $state.raw<{ ruta: Ruta; componente: Component<PropsPantalla> } | null>(null);
   let errorCarga = $state(false);
+  const Pantalla = $derived(cargada && actual && cargada.ruta === actual.ruta ? cargada.componente : null);
 
   $effect(() => {
     const destino = actual;
-    Pantalla = null;
     errorCarga = false;
     if (!destino) return;
     let vigente = true;
     destino.ruta
       .cargar()
       .then((m) => {
-        if (vigente) Pantalla = m.default;
+        if (vigente) cargada = { ruta: destino.ruta, componente: m.default };
       })
       .catch(() => {
         if (vigente) errorCarga = true;
@@ -37,13 +38,13 @@
     return navegacion.ruta === ruta || navegacion.ruta.startsWith(ruta + '/');
   }
 
-  // F2 desde cualquier pantalla: ir a buscar un precio.
+  // F2 desde cualquier pantalla: ir a buscar un producto.
   function alTeclear(e: KeyboardEvent) {
     if (e.key !== 'F2') return;
     e.preventDefault();
     const buscador = document.querySelector<HTMLInputElement>('[data-busqueda]');
     if (buscador) buscador.focus();
-    else navegar('/precios');
+    else navegar('/vender');
   }
 </script>
 

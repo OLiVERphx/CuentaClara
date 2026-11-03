@@ -37,7 +37,9 @@ src/
 │   ├── config/           configuración del negocio y del equipo
 │   └── respaldo/         respaldo cifrado (AES-GCM) y restauración
 ├── modulos/
-│   └── inventario/       productos, presentaciones, búsqueda, ajustes, kardex, importación CSV
+│   ├── inventario/       productos, presentaciones, búsqueda, ajustes, kardex, importación CSV
+│   ├── ventas/           ticket, cobro mixto y vuelto, comprobante, anulación, devolución
+│   └── caja/             apertura, resumen por método, gastos, retiros, cierre con arqueo
 ├── app/                  arranque, rutas, estado global, menú y pantallas del núcleo
 └── ui/                   componentes compartidos
 ```
@@ -47,7 +49,8 @@ src/
 1. Crear `src/modulos/<nombre>/` con su `esquema.ts`, `tipos.ts`, `servicio.ts`, pantallas y `manifiesto.ts`.
 2. Sumar sus tablas en una **versión nueva** de `src/core/db/db.ts` (nunca editar una versión publicada).
 3. Listar el manifiesto en `src/app/registro.ts`.
-4. Comunicarse con otros módulos por eventos (`core/eventos/bus.ts`), no importando sus servicios.
+4. Escribir en otros módulos solo por eventos (`core/eventos/bus.ts`). Leer de ellos sí se puede: tipos, funciones puras, almacén y `consultas.ts`.
+5. Si escucha eventos que escriben (por ejemplo `venta.registrada`), registrar los oyentes en un `oyentes.ts` y llamarlo desde `iniciar()`: así también se usan en las pruebas.
 
 ## Reglas que no se rompen
 

@@ -97,7 +97,7 @@ src/
 ### 3.3 Reglas de modularidad
 
 1. Cada módulo exporta un **manifiesto**: nombre, tablas, rutas, entradas de menú, permisos y suscripciones a eventos. El núcleo los registra al arrancar.
-2. **Ningún módulo importa servicios de otro.** Se comunican por eventos o por consultas de solo lectura expuestas por el núcleo.
+2. **Ningún módulo escribe en los datos de otro.** Las escrituras viajan por eventos. Un módulo sí puede *leer* de otro: sus tipos, sus funciones puras (por ejemplo, `inventario/precios.ts`), su almacén de pantalla y sus `consultas.ts` (por ejemplo, ventas pregunta a caja si hay una sesión abierta).
 3. Las pantallas no tocan la base de datos directamente: UI → servicio → repositorio.
 4. Las operaciones que cambian varias tablas (por ejemplo, registrar una venta) se ejecutan en **una sola transacción de Dexie**. Si algo falla, no se guarda nada.
 
@@ -332,6 +332,22 @@ Se calcula por método y por moneda. El usuario cuenta el efectivo, el sistema m
 - **Carpeta de respaldos automáticos:** se pospone a la Fase 5 junto con el respaldo automático; en la Fase 1 el respaldo es manual.
 - **Conteo físico:** se agregó como operación de inventario (se escribe lo contado y se registra solo la diferencia).
 - **Ajustes manuales:** nunca dejan el stock en negativo (D15 aplica a las ventas, no a los ajustes).
+
+### Fase 2 — terminada (2026-11-02)
+- [x] Pantalla de venta con búsqueda por teclado (↑↓ Enter), ticket editable y venta por peso.
+- [x] Cobro con pagos mixtos (Bs y $), referencia para pago móvil, punto y biopago, y vuelto en Bs, $ o pago móvil.
+- [x] Comprobante interno imprimible.
+- [x] Anulación (solo el dueño, con motivo) y devolución parcial.
+- [x] Caja: apertura con fondo, resumen por método, gastos, retiros, ingresos y cierre con arqueo.
+- [x] Si una venta falla a mitad de camino (por ejemplo, sin stock), no se guarda nada.
+
+**Decisiones tomadas al implementarla:**
+- **Cobro mixto proporcional:** un pago en $ vale su parte del ticket (`monto × totalBs ÷ totalUsd`), así pagar todo en $ cubre exactamente el total en Bs, sin diferencias por redondeo. La venta cuadra si la diferencia es menor que medio paso de redondeo o, si hubo pago en $, menor que medio centavo.
+- **Los precios se toman de la base al registrar,** no de la pantalla: si alguien cambia un precio con el ticket abierto, la venta lo detecta.
+- **Una venta con devoluciones ya no se anula entera;** el resto se devuelve con otra devolución.
+- **La anulación y la devolución usan la caja abierta en ese momento**, aunque la venta sea de otra sesión.
+- **El fiao (crédito) llega en la Fase 3** junto con los clientes; por eso aún no aparece como método de pago.
+- **Base de datos v2:** se agregaron las tablas de ventas y caja; los datos de la Fase 1 se conservan al actualizar.
 
 ---
 

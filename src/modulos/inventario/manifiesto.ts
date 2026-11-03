@@ -1,6 +1,7 @@
 import type { ManifiestoModulo } from '../../app/modulos';
 import { suscribir } from '../../core/eventos/bus';
 import { inventario } from './almacen.svelte';
+import { registrarOyentesInventario } from './oyentes';
 
 export const manifiestoInventario: ManifiestoModulo = {
   id: 'inventario',
@@ -34,7 +35,9 @@ export const manifiestoInventario: ManifiestoModulo = {
     { ruta: '/inventario', titulo: 'Inventario', icono: 'inventario', orden: 30, permiso: 'inventario.ajustar' },
   ],
   async iniciar() {
+    registrarOyentesInventario();
     suscribir('inventario.cambiado', ({ productoIds }) => inventario.refrescarProductos(productoIds));
+    suscribir('ventas.cambiadas', ({ productoIds }) => inventario.refrescarProductos(productoIds));
     suscribir('categorias.cambiadas', () => inventario.refrescarCategorias());
     await inventario.cargar();
   },

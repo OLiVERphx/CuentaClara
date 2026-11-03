@@ -1,6 +1,10 @@
 import Dexie, { type EntityTable } from 'dexie';
+import { esquemaCaja } from '../../modulos/caja/esquema';
+import type { Gasto, MovimientoCaja, SesionCaja } from '../../modulos/caja/tipos';
 import { esquemaInventario } from '../../modulos/inventario/esquema';
 import type { Categoria, MovimientoInventario, Presentacion, Producto } from '../../modulos/inventario/tipos';
+import { esquemaVentas } from '../../modulos/ventas/esquema';
+import type { Devolucion, DevolucionItem, Pago, Venta, VentaItem } from '../../modulos/ventas/tipos';
 import type { Contador, EntradaAuditoria, EntradaConfig, Tasa, Usuario } from './tipos';
 
 export const NOMBRE_BASE_DATOS = 'bodega';
@@ -30,10 +34,21 @@ export class BaseDatos extends Dexie {
   productos!: EntityTable<Producto, 'id'>;
   presentaciones!: EntityTable<Presentacion, 'id'>;
   movimientosInventario!: EntityTable<MovimientoInventario, 'id'>;
+  ventas!: EntityTable<Venta, 'id'>;
+  ventaItems!: EntityTable<VentaItem, 'id'>;
+  pagos!: EntityTable<Pago, 'id'>;
+  devoluciones!: EntityTable<Devolucion, 'id'>;
+  devolucionItems!: EntityTable<DevolucionItem, 'id'>;
+  sesionesCaja!: EntityTable<SesionCaja, 'id'>;
+  movimientosCaja!: EntityTable<MovimientoCaja, 'id'>;
+  gastos!: EntityTable<Gasto, 'id'>;
 
   constructor(nombre = NOMBRE_BASE_DATOS) {
     super(nombre);
+    // v1 (Fase 1): núcleo e inventario.
     this.version(1).stores({ ...esquemaNucleo, ...esquemaInventario });
+    // v2 (Fase 2): ventas y caja.
+    this.version(2).stores({ ...esquemaVentas, ...esquemaCaja });
   }
 }
 

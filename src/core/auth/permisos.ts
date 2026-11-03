@@ -12,6 +12,9 @@ export const PERMISOS = {
   'config.editar': 'Cambiar la configuración del negocio',
   'respaldo.gestionar': 'Crear y restaurar respaldos',
   'usuarios.gestionar': 'Gestionar usuarios',
+  'ventas.anular': 'Anular ventas',
+  'ventas.devolver': 'Registrar devoluciones',
+  'caja.gastos': 'Registrar gastos, retiros e ingresos de caja',
 } as const;
 
 export type Permiso = keyof typeof PERMISOS;
@@ -50,6 +53,12 @@ export function usuarioEnSesion(): UsuarioSesion | null {
 
 export function tienePermiso(permiso: Permiso): boolean {
   return usuarioActual !== null && rolTienePermiso(usuarioActual.rol, permiso);
+}
+
+/** Cualquier usuario con sesión abierta (vender, abrir y cerrar caja). */
+export function exigirSesion(): UsuarioSesion {
+  if (!usuarioActual) throw new ErrorPermiso('La sesión está cerrada. Ingresa tu PIN.');
+  return usuarioActual;
 }
 
 export function exigirPermiso(permiso: Permiso): UsuarioSesion {

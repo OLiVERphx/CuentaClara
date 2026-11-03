@@ -1,6 +1,6 @@
 import type { Ruta } from './modulos';
 
-export const RUTA_INICIAL = '/precios';
+export const RUTA_INICIAL = '/vender';
 
 function leerHash(): { ruta: string; consulta: URLSearchParams } {
   const hash = location.hash.replace(/^#/, '') || RUTA_INICIAL;

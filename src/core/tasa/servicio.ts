@@ -8,7 +8,8 @@ import { ErrorNegocio } from '../errores';
 import { emitir } from '../eventos/bus';
 import { esFechaValida, hoyLocal } from '../util/fechas';
 import { consultarTasaOficial } from './fuente';
-import { elegirProxima, elegirVigente } from './logica';
+import { leerNegocio } from '../config/config';
+import { elegirProxima, elegirVigente, tasaAplicada } from './logica';
 
 declare module '../eventos/bus' {
   interface MapaEventos {
@@ -24,6 +25,13 @@ export async function obtenerTasas(): Promise<Tasa[]> {
 
 export async function obtenerTasaVigente(hoy = hoyLocal()): Promise<Tasa | null> {
   return elegirVigente(await obtenerTasas(), hoy);
+}
+
+/** Tasa vigente con el ajuste del negocio aplicado, o `null` si no hay tasa. */
+export async function obtenerTasaAplicada(hoy = hoyLocal()): Promise<{ tasa: Tasa; aplicada: Tasa4 } | null> {
+  const [tasa, negocio] = await Promise.all([obtenerTasaVigente(hoy), leerNegocio()]);
+  if (!tasa) return null;
+  return { tasa, aplicada: tasaAplicada(tasa, negocio?.ajusteTasa ?? 0) };
 }
 
 export async function obtenerTasaProxima(hoy = hoyLocal()): Promise<Tasa | null> {

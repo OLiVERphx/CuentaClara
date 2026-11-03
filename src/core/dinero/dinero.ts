@@ -64,6 +64,11 @@ function aNumero(valor: bigint): number {
   return n;
 }
 
+/** Regla de tres con un solo redondeo: `valor × numerador ÷ denominador`. */
+export function proporcional(valor: number, numerador: number, denominador: number): number {
+  return aNumero(dividir(aBig(valor, 'valor') * aBig(numerador, 'numerador'), aBig(denominador, 'denominador')));
+}
+
 export function usdABs(monto: Centavos, tasa: Tasa4): Centimos {
   return aNumero(dividir(aBig(monto, 'monto') * aBig(tasa, 'tasa'), 10_000n));
 }

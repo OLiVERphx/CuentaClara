@@ -456,6 +456,49 @@ th.derecha {
   border-color: color-mix(in srgb, var(--primario) 30%, transparent);
 }
 
+/* ── Impresión (comprobantes) ───────────────────────────────────────────── */
+@media print {
+  @page {
+    margin: 4mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .barra,
+  .menu,
+  .no-imprimir,
+  .avisos {
+    display: none !important;
+  }
+
+  .marco {
+    display: block !important;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .comprobante {
+    max-width: 72mm !important;
+    border: 0 !important;
+    padding: 0 !important;
+    font-size: 11px !important;
+  }
+
+  .comprobante,
+  .comprobante * {
+    color: #000 !important;
+    background: transparent !important;
+    border-color: #000 !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

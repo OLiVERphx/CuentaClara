@@ -1,9 +1,15 @@
+import { manifiestoCaja } from '../modulos/caja/manifiesto';
 import { manifiestoInventario } from '../modulos/inventario/manifiesto';
+import { manifiestoVentas } from '../modulos/ventas/manifiesto';
 import type { EntradaMenu, ManifiestoModulo, Ruta } from './modulos';
 import { manifiestoNucleo } from './nucleo';
 
-/** Módulos activos. Las fases siguientes agregan aquí ventas, caja, clientes y compras. */
-export const MODULOS: ManifiestoModulo[] = [manifiestoNucleo, manifiestoInventario];
+/**
+ * Módulos activos. El orden importa: es el orden en que reaccionan a los
+ * eventos (el inventario valida el stock antes de que la caja registre cobros).
+ * Las fases siguientes agregan clientes y compras.
+ */
+export const MODULOS: ManifiestoModulo[] = [manifiestoNucleo, manifiestoInventario, manifiestoCaja, manifiestoVentas];
 
 export const RUTAS: Ruta[] = MODULOS.flatMap((m) => m.rutas);
 
