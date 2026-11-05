@@ -394,6 +394,13 @@ Se calcula por método y por moneda. El usuario cuenta el efectivo, el sistema m
 - **Contraseña del respaldo automático:** se guarda en el equipo para cifrar sin preguntar; protege la copia que sale (el pendrive), no el equipo. Las claves locales (equipo, bloqueo de PIN, esta contraseña) nunca se exportan.
 - **Permiso nuevo `reportes.ver`** (solo el dueño), porque los reportes muestran costos y ganancias.
 
+### Cambio de efectivo (2026-11-05, pedido tras probar el sistema)
+- El cliente paga con transferencia, pago móvil, punto o biopago (o con $) y se lleva efectivo. Se registran dos movimientos de caja ligados: entra lo recibido al método y sale lo entregado de la gaveta.
+- La **comisión** es la diferencia valuada en Bs (suma de ambos movimientos) y se muestra aparte en la caja. No cuenta como venta.
+- El cierre queda cuadrado: el efectivo esperado ya descuenta lo entregado, y el método recibido sube para conciliar con el banco.
+- Lo puede registrar el cajero (es operación de mostrador). Queda en la auditoría.
+- Aún no suma a la ganancia de los reportes; se puede agregar si se quiere.
+
 ---
 
 ## 11. Estrategia de pruebas

@@ -22,6 +22,8 @@ export interface ResumenCaja {
   abonosBs: Centimos;
   /** Pagos a proveedores hechos con dinero de la gaveta. */
   pagosProveedoresBs: Centimos;
+  /** Ganancia de los cambios de efectivo: lo recibido menos lo entregado, en Bs. */
+  comisionesCambioBs: Centimos;
   gastosBs: Centimos;
   retirosBs: Centimos;
 }
@@ -39,6 +41,7 @@ export function resumirCaja(sesion: Pick<SesionCaja, 'fondoBs' | 'fondoUsd'>, mo
   let vendidoBs = 0;
   let abonosBs = 0;
   let pagosProveedoresBs = 0;
+  let comisionesCambioBs = 0;
   let gastosBs = 0;
   let retirosBs = 0;
 
@@ -54,6 +57,8 @@ export function resumirCaja(sesion: Pick<SesionCaja, 'fondoBs' | 'fondoUsd'>, mo
     if (m.tipo === 'anulacion' && m.documentoId) anuladas.add(m.documentoId);
     if (m.tipo === 'abono_cliente') abonosBs += m.equivalenteBs;
     if (m.tipo === 'pago_proveedor') pagosProveedoresBs -= m.equivalenteBs;
+    // Cada cambio deja una entrada y una salida: su suma es la comisión cobrada.
+    if (m.tipo === 'cambio_efectivo') comisionesCambioBs += m.equivalenteBs;
     if (m.tipo === 'gasto') gastosBs -= m.equivalenteBs;
     if (m.tipo === 'retiro_dueno') retirosBs -= m.equivalenteBs;
   }
@@ -69,6 +74,7 @@ export function resumirCaja(sesion: Pick<SesionCaja, 'fondoBs' | 'fondoUsd'>, mo
     vendidoBs,
     abonosBs,
     pagosProveedoresBs,
+    comisionesCambioBs,
     gastosBs,
     retirosBs,
   };

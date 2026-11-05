@@ -5,7 +5,8 @@ import { dispositivoId, marcarCambio, nuevoRegistro } from '../../core/db/regist
 import { usdABs, type Centavos, type Centimos } from '../../core/dinero/dinero';
 import { ErrorNegocio } from '../../core/errores';
 import { emitir } from '../../core/eventos/bus';
-import { METODOS_PAGO, type MetodoPago } from '../../core/pagos';
+import { esDeCuenta, METODOS_PAGO, type MetodoPago } from '../../core/pagos';
+import { uuidv7 } from '../../core/util/id';
 import { obtenerTasaAplicada } from '../../core/tasa/servicio';
 import { ahoraIso } from '../../core/util/fechas';
 import { limpiar } from '../../core/util/texto';
@@ -153,6 +154,38 @@ export async function registrarMovimientoManual(datos: {
   });
   await emitir('caja.cambiada', {});
   return movimiento;
+}
+
+/**
+ * Cambio de efectivo: el cliente paga con un método sin efectivo (transferencia,
+ * pago móvil, punto, biopago…) y se lleva efectivo. La gaveta baja lo entregado y
+ * el método recibe lo cobrado; la diferencia, valuada en Bs, es la comisión.
+ */
+export async function registrarCambioEfectivo(datos: {
+  metodoRecibido: MetodoPago;
+  montoRecibido: number;
+  metodoEntregado: MetodoPago;
+  montoEntregado: number;
+  nota: string;
+}): Promise<{ comisionBs: Centimos }> {
+  exigirSesion();
+  validarMonto(datos.montoRecibido, 'Monto recibido');
+  validarMonto(datos.montoEntregado, 'Monto entregado');
+  if (!METODOS_PAGO[datos.metodoEntregado].efectivo) throw new ErrorNegocio('Lo que entregas tiene que ser efectivo.');
+  if (esDeCuenta(datos.metodoRecibido)) throw new ErrorNegocio('El cliente tiene que pagar con dinero, no con fiado.');
+  if (datos.metodoRecibido === datos.metodoEntregado) throw new ErrorNegocio('Elige métodos distintos para recibir y entregar.');
+  const resultado = await db.transaction('rw', tablas(), async () => {
+    const sesion = await exigirCajaAbierta();
+    const id = uuidv7();
+    const base = { tipo: 'cambio_efectivo' as const, descripcion: limpiar(datos.nota) || 'Cambio de efectivo', documentoTipo: 'cambio', documentoId: id };
+    const entra = await agregarMovimiento(sesion, { ...base, metodo: datos.metodoRecibido, monto: datos.montoRecibido });
+    const sale = await agregarMovimiento(sesion, { ...base, metodo: datos.metodoEntregado, monto: -datos.montoEntregado });
+    const comisionBs = entra.equivalenteBs + sale.equivalenteBs;
+    await auditar({ entidad: 'caja', entidadId: id, accion: 'cambio_efectivo', despues: { ...datos, comisionBs } });
+    return { comisionBs };
+  });
+  await emitir('caja.cambiada', {});
+  return resultado;
 }
 
 export async function registrarGasto(datos: {

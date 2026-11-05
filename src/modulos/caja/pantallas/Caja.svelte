@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { app, puede } from '../../../app/estado.svelte';
+  import { app, puede, tasaDelDia } from '../../../app/estado.svelte';
   import { ejecutarRespaldoAutomatico, leerRespaldoAuto, prepararPermiso, type ConfigRespaldoAuto } from '../../../core/respaldo/automatico';
   import { diasEntre, hoyLocal } from '../../../core/util/fechas';
   import { descargarArchivo } from '../../../ui/descargar';
-  import { ESCALA, formatearBs, formatearUsd, parsearDecimal } from '../../../core/dinero/dinero';
+  import { ESCALA, formatearBs, formatearUsd, parsearDecimal, usdABs } from '../../../core/dinero/dinero';
   import { formatearMonto, METODOS_PAGO, ORDEN_METODOS, type MetodoPago } from '../../../core/pagos';
   import { formatearFechaHora } from '../../../core/util/fechas';
   import Icono from '../../../ui/Icono.svelte';
@@ -12,7 +12,7 @@
   import { caja } from '../almacen.svelte';
   import { resumirCaja } from '../calculos';
   import { movimientosDeSesion, sesionesRecientes } from '../consultas';
-  import { abrirCaja, cerrarCaja, registrarGasto, registrarMovimientoManual } from '../servicio';
+  import { abrirCaja, cerrarCaja, registrarCambioEfectivo, registrarGasto, registrarMovimientoManual } from '../servicio';
   import { CATEGORIAS_GASTO, TIPOS_MOVIMIENTO_CAJA, type CategoriaGasto, type MovimientoCaja, type SesionCaja } from '../tipos';
 
   let movimientos = $state<MovimientoCaja[]>([]);
@@ -47,6 +47,48 @@
       await abrirCaja({ fondoBs: bs, fondoUsd: usd });
       avisar('Caja abierta. ¡Buenas ventas!');
       fondoBs = fondoUsd = '';
+    } catch (err) {
+      avisarError(err);
+    } finally {
+      procesando = false;
+    }
+  }
+
+  const tasa = $derived(tasaDelDia());
+
+  // ── Cambio de efectivo ──
+  const METODOS_EFECTIVO = ORDEN_METODOS.filter((m) => METODOS_PAGO[m].efectivo);
+  const METODOS_RECIBIDOS = ORDEN_METODOS.filter((m) => !METODOS_PAGO[m].efectivo);
+  let cambioAbierto = $state(false);
+  let cambio = $state({ recibido: 'pago_movil' as MetodoPago, montoRecibido: '', entregado: 'efectivo_bs' as MetodoPago, montoEntregado: '', nota: '' });
+  const leerMonto = (t: string, m: MetodoPago) => (METODOS_PAGO[m].moneda === 'USD' ? leerUsd(t) : leerBs(t));
+  const recibido = $derived(leerMonto(cambio.montoRecibido, cambio.recibido));
+  const entregado = $derived(leerMonto(cambio.montoEntregado, cambio.entregado));
+  // Comisión estimada en Bs con la tasa de hoy (la misma que usa el sistema).
+  const comisionCambio = $derived.by(() => {
+    if (!recibido || !entregado || tasa === null) return null;
+    const bs = (monto: number, m: MetodoPago) => (METODOS_PAGO[m].moneda === 'USD' ? usdABs(monto, tasa) : monto);
+    return bs(recibido, cambio.recibido) - bs(entregado, cambio.entregado);
+  });
+
+  function abrirCambio() {
+    cambio = { recibido: 'pago_movil', montoRecibido: '', entregado: 'efectivo_bs', montoEntregado: '', nota: '' };
+    cambioAbierto = true;
+  }
+
+  async function guardarCambio() {
+    if (!recibido || !entregado) return;
+    procesando = true;
+    try {
+      const r = await registrarCambioEfectivo({
+        metodoRecibido: cambio.recibido,
+        montoRecibido: recibido,
+        metodoEntregado: cambio.entregado,
+        montoEntregado: entregado,
+        nota: cambio.nota,
+      });
+      avisar(r.comisionBs > 0 ? `Cambio registrado. Comisión: ${formatearBs(r.comisionBs)}.` : 'Cambio registrado.');
+      cambioAbierto = false;
     } catch (err) {
       avisarError(err);
     } finally {
@@ -164,6 +206,7 @@
   <h1>Caja</h1>
   {#if caja.sesion}
     <div class="fila">
+      <button class="btn" onclick={abrirCambio}>Cambio de efectivo</button>
       {#if puede('caja.gastos')}
         <button class="btn" onclick={abrirGasto}>Gasto</button>
         <button class="btn" onclick={() => abrirManual('retiro_dueno')}>Retiro</button>
@@ -230,6 +273,12 @@
       <span class="suave">Efectivo $ en gaveta</span>
       <strong class="num">{formatearUsd(resumen.esperadoUsd)}</strong>
     </div>
+    {#if resumen.comisionesCambioBs}
+      <div class="tarjeta dato">
+        <span class="suave">Comisiones por cambio</span>
+        <strong class="num">{formatearBs(resumen.comisionesCambioBs)}</strong>
+      </div>
+    {/if}
     {#if resumen.pagosProveedoresBs}
       <div class="tarjeta dato">
         <span class="suave">Pagos a proveedores</span>
@@ -316,6 +365,50 @@
     </table>
   </div>
 {/if}
+
+<Modal bind:abierto={cambioAbierto} titulo="Cambio de efectivo">
+  <p class="ayuda">
+    El cliente paga con transferencia, pago móvil, punto o biopago y se lleva efectivo. La gaveta baja lo que entregas; si cobras de más,
+    la diferencia queda como comisión.
+  </p>
+  <div class="rejilla">
+    <label class="campo">
+      <span>El cliente paga con</span>
+      <select bind:value={cambio.recibido}>
+        {#each METODOS_RECIBIDOS as m}<option value={m}>{METODOS_PAGO[m].nombre}</option>{/each}
+        <option value="efectivo_usd">Efectivo $</option>
+      </select>
+    </label>
+    <label class="campo">
+      <span>Monto recibido ({METODOS_PAGO[cambio.recibido].moneda === 'USD' ? '$' : 'Bs'})</span>
+      <input bind:value={cambio.montoRecibido} inputmode="decimal" class="num" aria-invalid={cambio.montoRecibido !== '' && !recibido} />
+    </label>
+    <label class="campo">
+      <span>Se lleva</span>
+      <select bind:value={cambio.entregado}>
+        {#each METODOS_EFECTIVO.filter((m) => m !== cambio.recibido) as m}<option value={m}>{METODOS_PAGO[m].nombre}</option>{/each}
+      </select>
+    </label>
+    <label class="campo">
+      <span>Monto entregado ({METODOS_PAGO[cambio.entregado].moneda === 'USD' ? '$' : 'Bs'})</span>
+      <input bind:value={cambio.montoEntregado} inputmode="decimal" class="num" aria-invalid={cambio.montoEntregado !== '' && !entregado} />
+    </label>
+  </div>
+  <label class="campo">
+    <span>Nota</span>
+    <input bind:value={cambio.nota} maxlength="120" placeholder="Opcional" />
+  </label>
+  {#if comisionCambio !== null}
+    <div class="alerta" class:alerta-info={comisionCambio >= 0} class:alerta-aviso={comisionCambio < 0}>
+      {comisionCambio >= 0 ? 'Comisión que te queda' : 'Estás entregando más de lo que recibes'}:
+      <strong class="num">{formatearBs(Math.abs(comisionCambio))}</strong>
+    </div>
+  {/if}
+  {#snippet acciones()}
+    <button class="btn" onclick={() => (cambioAbierto = false)}>Cancelar</button>
+    <button class="btn btn-primario" disabled={procesando || !recibido || !entregado} onclick={guardarCambio}>Registrar cambio</button>
+  {/snippet}
+</Modal>
 
 <Modal bind:abierto={gastoAbierto} titulo="Registrar gasto">
   <label class="campo">

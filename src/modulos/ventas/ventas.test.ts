@@ -9,7 +9,7 @@ import { reiniciarBase, sesionDePrueba } from '../../test/util';
 import { resumirCaja } from '../caja/calculos';
 import { movimientosDeSesion, sesionAbierta } from '../caja/consultas';
 import { registrarOyentesCaja } from '../caja/oyentes';
-import { abrirCaja, cerrarCaja, registrarGasto, registrarMovimientoManual } from '../caja/servicio';
+import { abrirCaja, cerrarCaja, registrarCambioEfectivo, registrarGasto, registrarMovimientoManual } from '../caja/servicio';
 import { registrarOyentesInventario } from '../inventario/oyentes';
 import { crearProducto, obtenerCatalogo } from '../inventario/servicio';
 import type { Producto } from '../inventario/tipos';
@@ -311,6 +311,25 @@ describe('caja', () => {
     const cerrada = await cerrarCaja({ contadoBs: 940_000, contadoUsd: 1000, nota: 'Faltan 100 Bs' });
     expect(cerrada).toMatchObject({ estado: 'cerrada', esperadoBs: 950_000, contadoBs: 940_000, esperadoUsd: 1000 });
     expect(await sesionAbierta()).toBeNull();
+  });
+
+  it('cambio de efectivo: baja la gaveta, sube el método recibido y la diferencia es comisión', async () => {
+    // El cliente transfiere Bs 1.000 y se lleva Bs 900 en efectivo (comisión Bs 100). El cajero puede hacerlo.
+    sesionDePrueba('cajero');
+    const r = await registrarCambioEfectivo({ metodoRecibido: 'pago_movil', montoRecibido: 100_000, metodoEntregado: 'efectivo_bs', montoEntregado: 90_000, nota: '' });
+    expect(r.comisionBs).toBe(10_000);
+    // Otro: paga por punto Bs 8.895,75 y se lleva $10 en efectivo.
+    await registrarCambioEfectivo({ metodoRecibido: 'punto_venta', montoRecibido: 889_575, metodoEntregado: 'efectivo_usd', montoEntregado: 1000, nota: 'Dólares' });
+    const sesion = (await sesionAbierta())!;
+    const resumen = resumirCaja(sesion, await movimientosDeSesion(sesion.id));
+    expect(resumen.esperadoBs).toBe(1_000_000 - 90_000);
+    expect(resumen.esperadoUsd).toBe(2000 - 1000);
+    expect(resumen.porMetodo.find((t) => t.metodo === 'pago_movil')!.neto).toBe(100_000);
+    expect(resumen.comisionesCambioBs).toBe(10_000 + 0);
+    expect(resumen.vendidoBs).toBe(0);
+    await expect(
+      registrarCambioEfectivo({ metodoRecibido: 'pago_movil', montoRecibido: 100, metodoEntregado: 'biopago', montoEntregado: 100, nota: '' }),
+    ).rejects.toThrow('efectivo');
   });
 
   it('el cajero no registra gastos ni retiros', async () => {
