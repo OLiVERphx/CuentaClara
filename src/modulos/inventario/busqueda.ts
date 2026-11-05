@@ -41,7 +41,9 @@ export class IndiceProductos {
 
   actualizarCategorias(categorias: Categoria[]): void {
     this.categorias = new Map(categorias.map((c) => [c.id, c.nombre]));
-    for (const e of this.entradas.values()) this.poner(e.producto, e.presentaciones);
+    // Se recorre una copia: `poner` saca y vuelve a meter cada entrada, y un Map
+    // visita de nuevo lo que se reinserta durante el recorrido (ciclo infinito).
+    for (const e of [...this.entradas.values()]) this.poner(e.producto, e.presentaciones);
   }
 
   poner(producto: Producto, presentaciones: Presentacion[]): void {

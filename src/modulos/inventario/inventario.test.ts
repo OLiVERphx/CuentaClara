@@ -292,6 +292,18 @@ describe('búsqueda', () => {
     expect(porBarras[0]!.presentacionExacta?.id).toBe(bulto.id);
   });
 
+  it('crear una categoría con productos ya cargados no se cuelga y la hace buscable', () => {
+    // Regresión: al crear «Bebidas» con productos en el índice, la app se congelaba.
+    const indice = new IndiceProductos();
+    const coca = producto('Coca-Cola 1.5L');
+    indice.cargar([coca, producto('Harina'), producto('Arroz')], [], []);
+    const bebidas = nuevoRegistro({ nombre: 'Bebidas', nombreNormalizado: 'bebidas' });
+    indice.actualizarCategorias([bebidas]);
+    expect(indice.tamano).toBe(3);
+    indice.poner({ ...coca, categoriaId: bebidas.id }, []);
+    expect(indice.buscar('bebidas').map((r) => r.producto.nombre)).toEqual(['Coca-Cola 1.5L']);
+  });
+
   it('oculta inactivos salvo que se pidan y busca por categoría', () => {
     const indice = new IndiceProductos();
     const cat = nuevoRegistro({ nombre: 'Charcutería', nombreNormalizado: 'charcuteria' });
