@@ -14,13 +14,14 @@
     margenSobreVenta,
     multiplicarCantidad,
     parsearDecimal,
+    proporcional,
   } from '../../../core/dinero/dinero';
   import { ErrorNegocio } from '../../../core/errores';
   import { formatearFechaHora } from '../../../core/util/fechas';
   import { avisar, avisarError } from '../../../ui/notificaciones.svelte';
   import Icono from '../../../ui/Icono.svelte';
   import { inventario } from '../almacen.svelte';
-  import { enUsd, precioEnBs } from '../precios';
+  import { costoPorUnidad, enUsd, precioEnBs, precioSugerido } from '../precios';
   import { actualizarProducto, crearCategoria, crearProducto, listarMovimientos, type DatosPresentacion } from '../servicio';
   import { TIPOS_MOVIMIENTO, type MonedaPrecio, type MovimientoInventario, type Producto, type Unidad } from '../tipos';
 
@@ -91,6 +92,54 @@
   const precioUsd = $derived(precio !== null && tasa !== null ? enUsd(precio, f.moneda, tasa) : f.moneda === 'USD' ? precio : null);
   const margen = $derived(precioUsd !== null && costo !== null && costo > 0 ? margenSobreVenta(precioUsd, costo) : null);
   const etiquetaUnidad = $derived(f.unidad === 'kg' ? 'kg' : 'unidades');
+
+  // Calculadora de empaque: "pagué tanto por el paquete y trae tantas unidades".
+  let empaqueAbierto = $state(false);
+  let empaque = $state({ costo: '', moneda: 'USD' as MonedaPrecio, unidades: '' });
+  const empaqueCosto = $derived(parsearDecimal(empaque.costo, ESCALA.centavos));
+  const empaqueUnidades = $derived(parsearDecimal(empaque.unidades, ESCALA.milesimas));
+  const costoUnidadEmpaque = $derived(
+    empaqueCosto !== null && empaqueUnidades !== null && empaqueUnidades > 0
+      ? costoPorUnidad(empaqueCosto, empaque.moneda, empaqueUnidades, tasa)
+      : null,
+  );
+  const nombreEmpaque = $derived(
+    empaqueUnidades ? (f.unidad === 'kg' ? `Saco ${formatearCantidad(empaqueUnidades)} kg` : `Empaque x${formatearCantidad(empaqueUnidades)}`) : '',
+  );
+  const empaqueYaEsPresentacion = $derived(
+    empaqueUnidades !== null && presentaciones.some((p) => parsearDecimal(p.factor, ESCALA.milesimas) === empaqueUnidades),
+  );
+
+  // En cuanto el cálculo da un resultado, ese es el costo del producto.
+  $effect(() => {
+    const c = costoUnidadEmpaque;
+    if (c !== null) untrack(() => (f.costo = formatearParaEditar(c, ESCALA.diezmilesimas)));
+  });
+
+  const MARGENES = [2000, 2500, 3000, 4000, 5000];
+  const sugerencias = $derived(
+    costo !== null && costo > 0
+      ? MARGENES.map((m) => ({ margen: m, precio: precioSugerido(costo, m, f.moneda, tasa, redondeoBs()) })).filter(
+          (s): s is { margen: number; precio: number } => s.precio !== null,
+        )
+      : [],
+  );
+
+  function formatearPrecio(monto: number): string {
+    return f.moneda === 'USD' ? formatearUsd(monto) : formatearBs(monto);
+  }
+
+  function guardarEmpaqueComoPresentacion() {
+    if (!empaqueUnidades) return;
+    presentaciones.push({
+      nombre: nombreEmpaque,
+      factor: formatearParaEditar(empaqueUnidades, ESCALA.milesimas),
+      precio: '',
+      codigoBarras: '',
+      paraVenta: false,
+      paraCompra: true,
+    });
+  }
 
   function agregarPresentacion() {
     presentaciones.push({ nombre: '', factor: '', precio: '', codigoBarras: '', paraVenta: true, paraCompra: true });
@@ -260,6 +309,67 @@
             </label>
           {/if}
         </div>
+        {#if verCostos}
+          {#if !empaqueAbierto}
+            <button type="button" class="btn btn-chico enlace-empaque" onclick={() => (empaqueAbierto = true)}>
+              <Icono nombre="mas" tamano={16} /> ¿Lo compras por {f.unidad === 'kg' ? 'saco' : 'paquete'}? Calcula el costo de cada {f.unidad === 'kg' ? 'kilo' : 'unidad'}
+            </button>
+          {:else}
+            <div class="calculadora pila-chica">
+              <div class="fila-separada">
+                <strong>Costo desde el {f.unidad === 'kg' ? 'saco' : 'paquete'}</strong>
+                <button type="button" class="btn btn-fantasma btn-chico" aria-label="Cerrar calculadora" onclick={() => (empaqueAbierto = false)}>
+                  <Icono nombre="cerrar" tamano={18} />
+                </button>
+              </div>
+              <div class="rejilla">
+                <label class="campo">
+                  <span>Lo que pagaste por el {f.unidad === 'kg' ? 'saco' : 'paquete'}</span>
+                  <div class="fila sin-salto">
+                    <input bind:value={empaque.costo} inputmode="decimal" class="num" placeholder={empaque.moneda === 'USD' ? '2,00' : '1.800,00'}
+                      aria-invalid={empaque.costo !== '' && empaqueCosto === null} />
+                    <div class="segmentado" role="radiogroup" aria-label="Moneda del pago">
+                      <label><input type="radio" bind:group={empaque.moneda} value="USD" /> $</label>
+                      <label><input type="radio" bind:group={empaque.moneda} value="VES" /> Bs</label>
+                    </div>
+                  </div>
+                </label>
+                <label class="campo">
+                  <span>{f.unidad === 'kg' ? 'Kilos' : 'Unidades'} que trae</span>
+                  <input bind:value={empaque.unidades} inputmode="decimal" class="num" placeholder={f.unidad === 'kg' ? '50' : '24'}
+                    aria-invalid={empaque.unidades !== '' && !empaqueUnidades} />
+                </label>
+              </div>
+              {#if costoUnidadEmpaque !== null}
+                <p class="resultado">
+                  Cada {f.unidad === 'kg' ? 'kilo' : 'unidad'} te cuesta <strong class="num">{formatearCosto(costoUnidadEmpaque)}</strong>{#if tasa !== null}{' '}<span class="suave num">{`(≈ ${formatearBs(proporcional(costoUnidadEmpaque, tasa, 1_000_000))})`}</span>{/if}.
+                  Ya quedó como costo.
+                </p>
+                {#if !empaqueYaEsPresentacion}
+                  <button type="button" class="btn btn-chico" onclick={guardarEmpaqueComoPresentacion}>
+                    <Icono nombre="mas" tamano={16} /> Agregar «{nombreEmpaque}» como presentación de compra
+                  </button>
+                {/if}
+              {:else if empaque.moneda === 'VES' && tasa === null && empaqueCosto !== null}
+                <p class="suave">Sin tasa vigente no se puede convertir de Bs a $.</p>
+              {/if}
+            </div>
+          {/if}
+          {#if sugerencias.length > 0}
+            <div class="campo">
+              <span>Precio sugerido para ganar…</span>
+              <div class="sugerencias">
+                {#each sugerencias as s (s.margen)}
+                  <button type="button" class="btn btn-chico sugerencia" class:elegida={precio === s.precio}
+                    onclick={() => (f.precio = formatearParaEditar(s.precio, ESCALA.centavos))}>
+                    <span class="suave">{s.margen / 100} %</span>
+                    <strong class="num">{formatearPrecio(s.precio)}</strong>
+                  </button>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        {/if}
         {#if precio !== null}
           <div class="vista-previa">
             {#if tasa !== null}
@@ -422,6 +532,47 @@
     padding: 0.6rem 0.8rem;
     border-radius: var(--radio-chico);
     background: var(--superficie-2);
+  }
+
+  .enlace-empaque {
+    align-self: flex-start;
+  }
+
+  .calculadora {
+    padding: 0.8rem;
+    border: 1px dashed var(--borde);
+    border-radius: var(--radio-chico);
+  }
+
+  .calculadora .segmentado label {
+    padding: 0 0.8rem;
+  }
+
+  .resultado {
+    margin: 0;
+  }
+
+  .calculadora > .btn {
+    align-self: flex-start;
+  }
+
+  .sugerencias {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .sugerencia {
+    flex-direction: column;
+    gap: 0;
+    line-height: 1.2;
+    min-width: 4.5rem;
+  }
+
+  .sugerencia.elegida {
+    background: var(--primario-suave);
+    border-color: var(--primario);
+    color: var(--primario);
   }
 
   .stock-actual {

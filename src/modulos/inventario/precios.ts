@@ -70,7 +70,40 @@ export function nuevoPrecio(
   return redondearAPaso(crudo, Math.max(paso, 1), 'arriba');
 }
 
-export type EstadoStock = 'agotado' | 'bajo' | 'normal';
+/**
+ * Costo de una unidad base (en USD, diezmilésimas) a partir de lo que costó un
+ * empaque completo. `unidades` va en milésimas: un paquete de 50 caramelos → 50000.
+ * Si el empaque se pagó en Bs se convierte con la tasa.
+ */
+export function costoPorUnidad(costoEmpaque: number, moneda: MonedaPrecio, unidades: Milesimas, tasa: Tasa4 | null): number | null {
+  if (unidades <= 0 || costoEmpaque < 0) return null;
+  let usd4: number;
+  if (moneda === 'USD') usd4 = costoEmpaque * 100;
+  else if (tasa === null || tasa <= 0) return null;
+  else usd4 = proporcional(costoEmpaque, 1_000_000, tasa); // céntimos → USD × 10⁴
+  return proporcional(usd4, 1000, unidades);
+}
+
+/**
+ * Precio de venta para ganar `margen` (centésimas de %, sobre la venta) con
+ * ese costo, en la moneda del producto y redondeado hacia arriba: a $0,01 en
+ * USD, o al paso de redondeo del negocio si el precio es fijo en Bs.
+ */
+export function precioSugerido(
+  costo: number,
+  margen: number,
+  moneda: MonedaPrecio,
+  tasa: Tasa4 | null,
+  redondeo: Redondeo,
+): number | null {
+  if (costo <= 0 || margen <= 0 || margen >= 10_000) return null;
+  if (moneda === 'USD') return redondearAPaso(proporcional(costo, 10_000, (10_000 - margen) * 100), 1, 'arriba');
+  if (tasa === null || tasa <= 0) return null;
+  const costoBs = proporcional(costo, tasa, 1_000_000);
+  return redondearAPaso(proporcional(costoBs, 10_000, 10_000 - margen), Math.max(redondeo.paso, 1), 'arriba');
+}
+
+export type EstadoStock ='agotado' | 'bajo' | 'normal';
 
 export function estadoStock(producto: Pick<Producto, 'stock' | 'stockMinimo'>): EstadoStock {
   if (producto.stock <= 0) return 'agotado';

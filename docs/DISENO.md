@@ -401,6 +401,12 @@ Se calcula por método y por moneda. El usuario cuenta el efectivo, el sistema m
 - Lo puede registrar el cajero (es operación de mostrador). Queda en la auditoría.
 - Aún no suma a la ganancia de los reportes; se puede agregar si se quiere.
 
+### Costo desde el empaque (2026-11-05, pedido tras probar el sistema)
+- En la ficha del producto, «¿Lo compras por paquete?» abre una calculadora: lo pagado por el paquete (en $ o en Bs, convertido con la tasa del día) ÷ unidades (o kilos) que trae = costo por unidad, que se escribe solo en el campo de costo.
+- Con cualquier costo cargado se muestran precios sugeridos para ganar 20, 25, 30, 40 y 50 % sobre la venta, redondeados hacia arriba ($0,01, o el paso de redondeo si el precio es fijo en Bs). Un clic lo pone como precio; el margen real se ve en la vista previa.
+- Un botón agrega el paquete como presentación de compra («Empaque x50»), para que luego en Compras se cargue por paquete.
+- Lógica en `inventario/precios.ts` (`costoPorUnidad`, `precioSugerido`), con pruebas.
+
 ---
 
 ## 11. Estrategia de pruebas

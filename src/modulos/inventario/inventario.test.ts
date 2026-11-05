@@ -6,7 +6,7 @@ import { ErrorNegocio, ErrorPermiso } from '../../core/errores';
 import { reiniciarBase, sesionDePrueba } from '../../test/util';
 import { IndiceProductos } from './busqueda';
 import { decodificar, detectarSeparador, generarPlantilla, parsearCsv, validarCsv } from './csv';
-import { enBs, estadoStock, nuevoPrecio, precioEnBs, precioPresentacion, subtotalEnBs } from './precios';
+import { costoPorUnidad, enBs, estadoStock, nuevoPrecio, precioEnBs, precioPresentacion, precioSugerido, subtotalEnBs } from './precios';
 import {
   actualizarProducto,
   ajustarPrecios,
@@ -69,6 +69,28 @@ describe('precios', () => {
     expect(nuevoPrecio({ ...p, costoPromedio: 0 }, { tipo: 'margen', centesimas: 2000 }, 1)).toBeNull();
     expect(nuevoPrecio({ ...p, monedaPrecio: 'VES' }, { tipo: 'margen', centesimas: 2000 }, 1)).toBeNull();
     expect(nuevoPrecio(p, { tipo: 'margen', centesimas: 10_000 }, 1)).toBeNull();
+  });
+
+  it('saca el costo de cada unidad a partir del empaque', () => {
+    // Paquete de 50 caramelos a $2 → $0,04 c/u
+    expect(costoPorUnidad(200, 'USD', 50_000, null)).toBe(400);
+    // El mismo paquete pagado en Bs 1.779,15 con tasa 889,5754
+    expect(costoPorUnidad(177_915, 'VES', 50_000, 8_895_754)).toBe(400);
+    // Saco de 50 kg a $45 → $0,90 el kilo
+    expect(costoPorUnidad(4500, 'USD', 50_000, null)).toBe(9000);
+    expect(costoPorUnidad(177_915, 'VES', 50_000, null)).toBeNull(); // sin tasa
+    expect(costoPorUnidad(200, 'USD', 0, null)).toBeNull();
+  });
+
+  it('sugiere un precio de venta para el margen pedido', () => {
+    const alBolivar = { paso: 100, modo: 'cercano' as const };
+    expect(precioSugerido(400, 3000, 'USD', null, alBolivar)).toBe(6); // $0,04 ÷ 0,7 = 0,0571 → $0,06
+    expect(precioSugerido(10_000, 2000, 'USD', null, alBolivar)).toBe(125);
+    // En Bs fijo: $0,04 = Bs 35,58 → ÷ 0,7 = 50,83 → Bs 51
+    expect(precioSugerido(400, 3000, 'VES', 8_895_754, alBolivar)).toBe(5100);
+    expect(precioSugerido(400, 3000, 'VES', null, alBolivar)).toBeNull();
+    expect(precioSugerido(0, 3000, 'USD', null, alBolivar)).toBeNull();
+    expect(precioSugerido(400, 10_000, 'USD', null, alBolivar)).toBeNull();
   });
 
   it('calcula el precio de una presentación', () => {
