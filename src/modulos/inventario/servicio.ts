@@ -343,6 +343,37 @@ export async function registrarConteo(productoId: string, contado: Milesimas, mo
   return producto;
 }
 
+/**
+ * Conteo de muchos productos a la vez (para ponerse al día). Todo o nada: si
+ * una cantidad es inválida no se guarda ninguna. Los que coinciden con el
+ * sistema se saltan. Devuelve cuántos productos cambiaron.
+ */
+export async function registrarConteoMasivo(conteos: { productoId: string; contado: Milesimas }[], motivo = ''): Promise<number> {
+  exigirPermiso('inventario.ajustar');
+  const nota = limpiar(motivo);
+  const cambiados: string[] = [];
+  await db.transaction('rw', tablas(), async () => {
+    for (const { productoId, contado } of conteos) {
+      const actual = await db.productos.get(productoId);
+      if (!actual || !vigente(actual)) throw new ErrorNegocio('Uno de los productos ya no existe.');
+      validarCantidad(contado, actual.unidad, `«${actual.nombre}»`);
+      const diferencia = contado - actual.stock;
+      if (diferencia === 0) continue;
+      await aplicarMovimiento(actual, {
+        tipo: diferencia > 0 ? 'ajuste_positivo' : 'ajuste_negativo',
+        cantidad: Math.abs(diferencia),
+        motivo: `${nota ? `${nota} · ` : ''}Conteo físico: ${formatearCantidad(contado, actual.unidad)}`,
+      });
+      cambiados.push(productoId);
+    }
+    if (cambiados.length > 0) {
+      await auditar({ entidad: 'inventario', entidadId: 'conteo', accion: 'conteo_masivo', despues: { productos: cambiados.length, motivo: nota } });
+    }
+  });
+  if (cambiados.length > 0) await emitir('inventario.cambiado', { productoIds: cambiados });
+  return cambiados.length;
+}
+
 export async function listarMovimientos(productoId: string, limite = 50): Promise<MovimientoInventario[]> {
   return db.movimientosInventario
     .where('[productoId+creadoEn]')

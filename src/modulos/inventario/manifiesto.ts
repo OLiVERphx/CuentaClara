@@ -30,6 +30,12 @@ export const manifiestoInventario: ManifiestoModulo = {
       cargar: () => import('./pantallas/Ajustes.svelte'),
       permiso: 'inventario.ajustar',
     },
+    {
+      patron: '/inventario/conteo',
+      titulo: 'Conteo rápido',
+      cargar: () => import('./pantallas/ConteoRapido.svelte'),
+      permiso: 'inventario.ajustar',
+    },
     { patron: '/inventario/reponer', titulo: 'Por reponer', cargar: () => import('./pantallas/Reponer.svelte') },
     {
       patron: '/inventario/importar',

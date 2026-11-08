@@ -407,6 +407,13 @@ Se calcula por método y por moneda. El usuario cuenta el efectivo, el sistema m
 - Un botón agrega el paquete como presentación de compra («Empaque x50»), para que luego en Compras se cargue por paquete.
 - Lógica en `inventario/precios.ts` (`costoPorUnidad`, `precioSugerido`), con pruebas.
 
+### Conteo rápido (2026-11-08, para ponerse al día tras días sin usar el sistema)
+- Inventario → «Conteo rápido» (`/inventario/conteo`): tabla con todos los productos activos, agrupados por categoría, con buscador y filtro. Se escribe lo contado; la diferencia se ve al momento. En blanco = no se toca.
+- Orden recomendado: primero registrar en Compras la mercancía que llegó (costos y deudas), luego contar. Si se cuenta primero, la compra sumaría de nuevo.
+- Lo escrito se guarda como borrador en el navegador (localStorage) para poder contar por partes.
+- Se guarda todo junto en una sola transacción (`registrarConteoMasivo`): si una cantidad es inválida no se guarda nada; los que cuadran se saltan. Cada diferencia queda como ajuste (+/−) en el kardex con la nota elegida («Puesta al día» por defecto).
+- Las ventas de esos días no aparecen en los reportes; salen como ajustes de inventario (decisión del usuario: le basta con tener el stock al día).
+
 ---
 
 ## 11. Estrategia de pruebas

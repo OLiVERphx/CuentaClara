@@ -17,6 +17,7 @@ import {
   obtenerCatalogo,
   registrarAjuste,
   registrarConteo,
+  registrarConteoMasivo,
   type DatosProducto,
 } from './servicio';
 import type { Producto } from './tipos';
@@ -193,6 +194,39 @@ describe('servicio de inventario', () => {
     const [ultimo] = await listarMovimientos(p.id, 1);
     expect(ultimo).toMatchObject({ tipo: 'ajuste_negativo', cantidad: -3000, motivo: 'Conteo físico: 7' });
     await expect(registrarConteo(p.id, 7000)).rejects.toThrow(ErrorNegocio);
+  });
+
+  it('el conteo masivo ajusta varios productos de una vez y es todo o nada', async () => {
+    const a = await crearProducto(base, [], 10_000);
+    const b = await crearProducto({ ...base, nombre: 'Arroz 1 kg' }, [], 5000);
+    const c = await crearProducto({ ...base, nombre: 'Azúcar 1 kg' }, [], 4000);
+    const cambiados = await registrarConteoMasivo(
+      [
+        { productoId: a.id, contado: 6000 },
+        { productoId: b.id, contado: 5000 }, // igual: se salta
+        { productoId: c.id, contado: 12_000 }, // llegó mercancía
+      ],
+      'Puesta al día',
+    );
+    expect(cambiados).toBe(2);
+    const [movA] = await listarMovimientos(a.id, 1);
+    expect(movA).toMatchObject({ tipo: 'ajuste_negativo', cantidad: -4000, motivo: 'Puesta al día · Conteo físico: 6' });
+    expect((await listarMovimientos(b.id)).length).toBe(1); // solo el inventario inicial
+    const [movC] = await listarMovimientos(c.id, 1);
+    expect(movC).toMatchObject({ tipo: 'ajuste_positivo', cantidad: 8000, stockResultante: 12_000 });
+
+    // Una cantidad inválida no deja nada a medias
+    await expect(
+      registrarConteoMasivo([
+        { productoId: a.id, contado: 1000 },
+        { productoId: b.id, contado: 2500 }, // media unidad
+      ]),
+    ).rejects.toThrow(ErrorNegocio);
+    const { productos } = await obtenerCatalogo();
+    expect(productos.find((p) => p.id === a.id)!.stock).toBe(6000);
+
+    sesionDePrueba('cajero');
+    await expect(registrarConteoMasivo([{ productoId: a.id, contado: 0 }])).rejects.toThrow(ErrorPermiso);
   });
 
   it('el ajuste masivo cambia precios y escala las presentaciones con precio propio', async () => {

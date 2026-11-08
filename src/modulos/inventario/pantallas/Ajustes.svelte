@@ -95,6 +95,7 @@
 <div class="encabezado-pagina">
   <h1>Ajustes de inventario</h1>
   <div class="fila">
+    <a class="btn btn-primario" href="#/inventario/conteo"><Icono nombre="check" /> Conteo rápido</a>
     <a class="btn" href="#/inventario/reponer">
       <Icono nombre="alerta" /> Por reponer{#if porReponer > 0} <span class="chip chip-bajo num">{porReponer}</span>{/if}
     </a>
