@@ -5,6 +5,7 @@
   import { fijarDispositivo } from '../../core/db/registro';
   import { ESCALA, formatearTasa, parsearDecimal } from '../../core/dinero/dinero';
   import { ErrorNegocio, mensajeDeError } from '../../core/errores';
+  import { EXTENSION_RESPALDO, leerRespaldo, restaurarEnEquipoNuevo } from '../../core/respaldo/respaldo';
   import { consultarTasaOficial, type TasaConsultada } from '../../core/tasa/fuente';
   import { guardarTasaAutomatica, registrarTasaManual } from '../../core/tasa/servicio';
   import { esFechaValida, formatearFecha, hoyLocal } from '../../core/util/fechas';
@@ -25,6 +26,39 @@
   let pinConfirmado = $state('');
   let confirmandoPin = $state(false);
   let equipo = $state({ nombre: 'Laptop', prefijo: 'L' });
+
+  // Otra opción: traer una bodega que ya existe en otro equipo (respaldo).
+  let restaurando = $state(false);
+  let respaldo = $state<{ archivo: File | null; contrasena: string; nombre: string; prefijo: string }>({
+    archivo: null,
+    contrasena: '',
+    nombre: 'Teléfono',
+    prefijo: 'T',
+  });
+
+  async function cargarBodega(e: SubmitEvent) {
+    e.preventDefault();
+    error = '';
+    if (!respaldo.archivo) {
+      error = `Elige el archivo de respaldo (${EXTENSION_RESPALDO}).`;
+      return;
+    }
+    if (!/^[A-Za-z]{1,2}$/.test(respaldo.prefijo.trim())) {
+      error = 'El prefijo debe ser una o dos letras.';
+      return;
+    }
+    guardando = true;
+    try {
+      const contenido = await leerRespaldo(respaldo.archivo, respaldo.contrasena);
+      await restaurarEnEquipoNuevo(contenido, { nombre: respaldo.nombre, prefijo: respaldo.prefijo });
+      // Arranca de cero con la bodega cargada: pedirá el PIN de siempre.
+      location.hash = '/vender';
+      location.reload();
+    } catch (err) {
+      error = mensajeDeError(err);
+      guardando = false;
+    }
+  }
 
   let tasaAuto = $state<TasaConsultada | null>(null);
   let consultando = $state(false);
@@ -116,9 +150,46 @@
   <div class="caja tarjeta pila">
     <div class="pila-chica">
       <div class="marca"><Icono nombre="tienda" tamano={28} /> <strong>Bienvenido</strong></div>
-      <p class="suave">Configuremos tu negocio. Toma un par de minutos y solo se hace una vez.</p>
+      <p class="suave">
+        {restaurando ? 'Carga en este equipo la bodega que ya usas en otro.' : 'Configuremos tu negocio. Toma un par de minutos y solo se hace una vez.'}
+      </p>
     </div>
 
+    {#if restaurando}
+      <form class="pila" onsubmit={cargarBodega}>
+        <ol class="instrucciones">
+          <li>En el otro equipo: <strong>Configuración → Respaldo → Crear respaldo</strong>.</li>
+          <li>Pásate el archivo (WhatsApp, Drive, cable…) y elígelo aquí.</li>
+        </ol>
+        <label class="campo">
+          <span>Archivo de respaldo ({EXTENSION_RESPALDO})</span>
+          <input type="file" onchange={(e) => (respaldo.archivo = e.currentTarget.files?.[0] ?? null)} />
+        </label>
+        <label class="campo">
+          <span>Contraseña del respaldo</span>
+          <input type="password" autocomplete="off" bind:value={respaldo.contrasena} />
+        </label>
+        <div class="rejilla">
+          <label class="campo">
+            <span>Nombre de este equipo</span>
+            <input bind:value={respaldo.nombre} maxlength="30" />
+          </label>
+          <label class="campo">
+            <span>Prefijo (1 o 2 letras)</span>
+            <input bind:value={respaldo.prefijo} maxlength="2" class="mono" />
+          </label>
+        </div>
+        <p class="ayuda">
+          Usa un prefijo distinto al del otro equipo: las ventas de este serán
+          <span class="mono">{respaldo.prefijo.toUpperCase() || 'T'}-000001</span>, sin chocar con las de la laptop. Entrarás con tus mismos usuarios y PIN.
+        </p>
+        {#if error}<div class="alerta alerta-peligro">{error}</div>{/if}
+        <div class="fila-separada">
+          <button type="button" class="btn" onclick={() => { restaurando = false; error = ''; }}>Atrás</button>
+          <button type="submit" class="btn btn-primario" disabled={guardando}>{guardando ? 'Cargando…' : 'Cargar mi bodega'}</button>
+        </div>
+      </form>
+    {:else}
     <ol class="pasos" aria-label="Pasos">
       {#each PASOS as nombre, i}
         <li class:hecho={i < paso} class:actual={i === paso} aria-current={i === paso ? 'step' : undefined}>
@@ -150,6 +221,9 @@
         </label>
         <p class="ayuda">Estos datos aparecen en los comprobantes. Se pueden cambiar después.</p>
         {@render pie()}
+        <button type="button" class="btn btn-fantasma ya-tengo" onclick={() => { restaurando = true; error = ''; }}>
+          <Icono nombre="subir" /> ¿Ya usas la bodega en otro equipo? Cárgala desde un respaldo
+        </button>
       </form>
     {:else if paso === 1}
       <div class="pila">
@@ -223,6 +297,7 @@
         {/if}
         {@render pie('Terminar', guardando)}
       </form>
+    {/if}
     {/if}
   </div>
 </div>
@@ -309,6 +384,18 @@
     background: var(--primario);
     border-color: var(--primario);
     color: var(--sobre-primario);
+  }
+
+  .ya-tengo {
+    border-top: 1px solid var(--borde);
+    border-radius: 0;
+    padding-top: 1rem;
+    white-space: normal;
+  }
+
+  .instrucciones {
+    margin: 0;
+    padding-left: 1.2rem;
   }
 
   .centro {

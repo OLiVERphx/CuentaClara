@@ -122,7 +122,7 @@
     <div class="rejilla">
       <label class="campo">
         <span>Archivo {EXTENSION_RESPALDO}</span>
-        <input type="file" accept={EXTENSION_RESPALDO} onchange={(e) => (archivo = e.currentTarget.files?.[0] ?? null)} />
+        <input type="file" onchange={(e) => (archivo = e.currentTarget.files?.[0] ?? null)} />
       </label>
       <label class="campo">
         <span>Contraseña del respaldo</span>

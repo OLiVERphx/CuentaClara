@@ -414,6 +414,12 @@ Se calcula por método y por moneda. El usuario cuenta el efectivo, el sistema m
 - Se guarda todo junto en una sola transacción (`registrarConteoMasivo`): si una cantidad es inválida no se guarda nada; los que cuadran se saltan. Cada diferencia queda como ajuste (+/−) en el kardex con la nota elegida («Puesta al día» por defecto).
 - Las ventas de esos días no aparecen en los reportes; salen como ajustes de inventario (decisión del usuario: le basta con tener el stock al día).
 
+### Uso en el teléfono — Etapa 1 (2026-11-11)
+- La app se publica en Vercel desde el repositorio `OLiVERphx/CuentaClara`; el hosting solo sirve archivos estáticos, los datos siguen en cada equipo. `vercel.json` evita que `sw.js`/`index.html` queden en caché (para que lleguen las actualizaciones) y pide no indexar.
+- Equipo nuevo: el asistente ofrece «¿Ya usas la bodega en otro equipo?» → elige un respaldo, su contraseña, el nombre y prefijo del equipo (`restaurarEnEquipoNuevo`). Solo funciona si el equipo no tiene usuarios (no sirve para saltarse el PIN), y rechaza prefijos que ya aparecen en los números de ventas, compras o devoluciones del respaldo.
+- Hasta la Fase 6, un solo equipo registra a la vez; para cambiar de equipo se pasa un respaldo. Por los cortes de luz se recomienda que el teléfono sea el equipo principal del mostrador.
+- Etapa 2 (= Fase 6): sincronización en la nube; el servidor en la laptop queda descartado porque se apaga con la luz.
+
 ---
 
 ## 11. Estrategia de pruebas

@@ -1,5 +1,6 @@
 import { exigirPermiso } from '../auth/permisos';
-import { CLAVES_LOCALES } from '../config/config';
+import { hayUsuarios } from '../auth/usuarios';
+import { CLAVES_LOCALES, guardarDispositivo } from '../config/config';
 import { db } from '../db/db';
 import { dispositivoId } from '../db/registro';
 import type { EntradaConfig } from '../db/tipos';
@@ -7,6 +8,7 @@ import { ErrorNegocio } from '../errores';
 import { emitir } from '../eventos/bus';
 import { bytesAleatorios } from '../util/bytes';
 import { ahoraIso } from '../util/fechas';
+import { uuidv7 } from '../util/id';
 
 declare module '../eventos/bus' {
   interface MapaEventos {
@@ -121,6 +123,46 @@ export function resumirRespaldo(contenido: ContenidoRespaldo): Record<string, nu
  */
 export async function restaurarRespaldo(contenido: ContenidoRespaldo): Promise<void> {
   exigirPermiso('respaldo.gestionar');
+  await reemplazarDatos(contenido);
+  await emitir('datos.restaurados', {});
+}
+
+/**
+ * Prefijos de numeración que ya usó algún equipo en este respaldo (L-000123,
+ * L-C00012…). Un equipo nuevo no puede repetirlos.
+ */
+export function prefijosUsados(contenido: ContenidoRespaldo): Set<string> {
+  const usados = new Set<string>();
+  for (const tabla of ['ventas', 'compras', 'devoluciones']) {
+    for (const fila of contenido.datos[tabla] ?? []) {
+      const m = /^([A-Z]{1,2})-/.exec((fila as { numero?: unknown }).numero as string);
+      if (m) usados.add(m[1]!);
+    }
+  }
+  return usados;
+}
+
+/**
+ * Primer arranque en un equipo nuevo (por ejemplo, el teléfono): carga la
+ * bodega de otro equipo desde su respaldo y le da a este equipo su propio
+ * nombre y prefijo. Solo se permite mientras este equipo no tenga usuarios,
+ * así no sirve para saltarse el PIN de una bodega ya configurada.
+ */
+export async function restaurarEnEquipoNuevo(contenido: ContenidoRespaldo, equipo: { nombre: string; prefijo: string }): Promise<void> {
+  if (await hayUsuarios()) throw new ErrorNegocio('Este equipo ya tiene una bodega. Restaura desde Configuración → Respaldo.');
+  const prefijo = equipo.prefijo.trim().toUpperCase();
+  if (prefijosUsados(contenido).has(prefijo)) {
+    throw new ErrorNegocio(`El prefijo ${prefijo} ya lo usa otro equipo de esta bodega. Elige otro (por ejemplo T).`);
+  }
+  if (!(contenido.datos.usuarios ?? []).length) throw new ErrorNegocio('El respaldo no trae usuarios; no se podría entrar.');
+  await db.transaction('rw', db.tables, async () => {
+    await reemplazarDatos(contenido);
+    await guardarDispositivo({ id: uuidv7(), nombre: equipo.nombre.trim() || 'Teléfono', prefijo });
+  });
+}
+
+/** Reemplaza todos los datos por los del respaldo, conservando lo propio de este equipo. */
+async function reemplazarDatos(contenido: ContenidoRespaldo): Promise<void> {
   const nombres = new Set(db.tables.map((t) => t.name));
   for (const tabla of Object.keys(contenido.datos)) {
     if (!nombres.has(tabla)) throw new ErrorNegocio(`El respaldo trae una tabla desconocida: ${tabla}.`);
@@ -138,5 +180,4 @@ export async function restaurarRespaldo(contenido: ContenidoRespaldo): Promise<v
       }
     }
   });
-  await emitir('datos.restaurados', {});
 }

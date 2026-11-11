@@ -5,7 +5,16 @@ import { db } from '../db/db';
 import { ErrorNegocio, ErrorPermiso } from '../errores';
 import { guardarTasaAutomatica } from '../tasa/servicio';
 import { configurarRespaldoAuto, ejecutarRespaldoAutomatico, leerRespaldoAuto, type Carpeta } from './automatico';
-import { crearRespaldo, exportarContenido, leerRespaldo, restaurarRespaldo, resumirRespaldo } from './respaldo';
+import { crearUsuario } from '../auth/usuarios';
+import {
+  crearRespaldo,
+  exportarContenido,
+  leerRespaldo,
+  prefijosUsados,
+  restaurarEnEquipoNuevo,
+  restaurarRespaldo,
+  resumirRespaldo,
+} from './respaldo';
 
 describe('respaldo', () => {
   beforeEach(async () => {
@@ -86,5 +95,26 @@ describe('respaldo', () => {
     expect((await leerNegocio())?.nombre).toBe('Bodega La Esquina');
     expect(await db.tasas.count()).toBe(1);
     expect((await leerDispositivo())?.prefijo).toBe('T');
+  });
+
+  it('un equipo nuevo carga la bodega de otro con su propio prefijo', async () => {
+    await crearUsuario({ nombre: 'Oliver', rol: 'dueno', pin: '1234' });
+    const contenido = await leerRespaldo(await crearRespaldo('contrasena-larga'), 'contrasena-larga');
+    contenido.datos.ventas = [{ numero: 'L-000001' }, { numero: 'L-000002' }];
+    expect([...prefijosUsados(contenido)]).toEqual(['L']);
+
+    await reiniciarBase(); // el teléfono, recién abierto
+    await expect(restaurarEnEquipoNuevo(contenido, { nombre: 'Teléfono', prefijo: 'l' })).rejects.toThrow('ya lo usa otro equipo');
+    contenido.datos.ventas = [];
+    await guardarDispositivo({ id: 'x', nombre: 'x', prefijo: 'X' }); // queda de un intento a medias
+    await restaurarEnEquipoNuevo(contenido, { nombre: 'Teléfono', prefijo: 't' });
+
+    expect((await leerNegocio())?.nombre).toBe('Bodega La Esquina');
+    expect(await db.usuarios.count()).toBe(1);
+    const dispositivo = await leerDispositivo();
+    expect(dispositivo).toMatchObject({ nombre: 'Teléfono', prefijo: 'T' });
+    expect(dispositivo?.id).not.toBe('x');
+    // Con la bodega ya cargada no sirve para saltarse el PIN.
+    await expect(restaurarEnEquipoNuevo(contenido, { nombre: 'Otro', prefijo: 'O' })).rejects.toThrow('ya tiene una bodega');
   });
 });

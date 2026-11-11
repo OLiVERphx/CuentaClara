@@ -1,6 +1,6 @@
-# Bodega
+# CuentaClara
 
-Sistema de gestión para bodegas venezolanas: inventario, precios en USD y Bs con la tasa del BCV, y (en próximas fases) ventas, caja, fiao y proveedores.
+Sistema local de gestión de emprendimientos (bodegas, kioskos, tienditas): inventario, precios en USD y Bs con la tasa del BCV, ventas, caja, fiao, compras y proveedores, reportes y respaldos cifrados.
 
 Es una PWA *local-first*: se instala desde el navegador, guarda los datos en el propio equipo y funciona sin internet. El diseño completo y las decisiones están en [docs/DISENO.md](docs/DISENO.md).
 
@@ -22,6 +22,17 @@ npm run iconos       # regenera los íconos PWA desde public/icono.svg
 ```
 
 El modo sin conexión solo se activa en la versión de producción (`build` + `preview` o el hosting), no en `dev`.
+
+## Publicar en Vercel (para usarla en el teléfono)
+
+El hosting solo entrega el programa: **los datos nunca salen del equipo** (viven en el navegador de cada uno).
+
+1. En Vercel: *Add New → Project → Import* este repositorio. Detecta Vite solo; la configuración está en `vercel.json`.
+2. Cada `git push` a `main` publica una versión nueva; la app avisa «Hay una versión nueva» y se actualiza al aceptar.
+3. En el teléfono: abrir el enlace en Chrome → menú ⋮ → *Agregar a pantalla de inicio*. Desde ahí funciona sin internet.
+4. Para llevar la bodega: en la laptop *Configuración → Respaldo → Crear respaldo*; en el teléfono, en la pantalla de bienvenida, *«¿Ya usas la bodega en otro equipo?»* y elegir el archivo. El teléfono usa su propio prefijo (T) para no repetir números.
+
+Mientras no exista la sincronización (Fase 6), un solo equipo debe registrar ventas a la vez; para cambiar de equipo se pasa un respaldo.
 
 ## Estructura
 
